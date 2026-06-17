@@ -34,7 +34,7 @@ const C = {
 const DEF_PROJECTS = [
   { id:1, title:"Portal Coro Misioneros de Jesús", desc:"Plataforma digital integral para gestión coral: asistencia, finanzas, cancionero con transpositor de acordes y control de acceso por roles.", url:"https://portal-coro-mj.vercel.app", imgs:["https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=700&q=80","",""], tags:["React","Supabase","PWA"] },
   { id:2, title:"PropManager", desc:"SaaS para corredores de propiedades en Chile. Gestión de inventario, contratos y finanzas con precios escalonados en UF.", url:"https://prop-manager-rust.vercel.app", imgs:["https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=700&q=80","",""], tags:["React","Node.js","SaaS"] },
-  { id:3, title:"Modernización Core Bancario", desc:"Migración de consultas COBOL/AS400 a microservicios en AWS. Arquitectura de dominio con Aurora PostgreSQL e Ingress Controller.", url:"#", imgs:["https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=700&q=80","",""], tags:["AWS","PostgreSQL","Microservicios"] },
+  { id:3, title:"Mármoles Licancura", desc:"Sitio web para empresa familiar chilena especializada en mármol, granito y piedra natural. Catálogo de materiales, galería de proyectos, cotizador online y formulario de contacto.", url:"#", imgs:["https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&q=80","",""], tags:["React","Vercel","Diseño Web"] },
 ];
 
 const DEF_SECTORS = ["Fintech","Inmobiliarias","eCommerce","Startups","ONGs","Educación","Manufactura","Salud","Retail","Servicios"];
@@ -162,7 +162,7 @@ function Mark({ size = 36, text = false }) {
       {text && (
         <div>
           <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:15.5, letterSpacing:"-.02em", color:C.txt, lineHeight:1 }}>Tempvs7</div>
-          <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:400, fontSize:9, letterSpacing:".18em", color:C.mid, textTransform:"uppercase", marginTop:2 }}>Software Engineering</div>
+          <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:400, fontSize:9, letterSpacing:".18em", color:C.mid, textTransform:"uppercase", marginTop:2 }}>Ingeniería de Software</div>
         </div>
       )}
     </div>

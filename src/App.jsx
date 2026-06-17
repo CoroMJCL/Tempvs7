@@ -4,6 +4,10 @@ import {
   ArrowRight, ExternalLink, X, Send, Plus, Trash2,
   MessageCircle, Settings, Check, Code2, ChevronRight
 } from "lucide-react";
+import {
+  getProjects, getSectors, getSocialLinks,
+  saveContact, saveProject, deleteProject, updateSocial
+} from "./supabase.js";
 
 // ═══════════════════════════════════════════════════════
 //  TEMPVS7 — Dark Tech / Electric Blue
@@ -113,14 +117,54 @@ function HeroImage() {
   );
 }
 
-// ── MARK / LOGO ──────────────────────────────────────────────────
+// ── MARK / LOGO PREMIUM ──────────────────────────────────────────
 function Mark({ size = 36, text = false }) {
+  const s = size;
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-      <div style={{ width:size, height:size, borderRadius:size * .25, background:C.bgS, border:`1.5px solid ${C.ac}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, boxShadow:`0 0 14px ${C.acG}`, animation:"glow 3s ease infinite" }}>
-        <span style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:size * .36, color:C.ac, letterSpacing:"-.02em" }}>T<sup style={{ fontSize:size * .2, verticalAlign:"super" }}>7</sup></span>
-      </div>
-      {text && <span style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:16, letterSpacing:"-.02em", color:C.txt }}>Tempvs7</span>}
+    <div style={{ display:"flex", alignItems:"center", gap:11, cursor:"pointer" }}>
+      <svg width={s} height={s} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0, filter:`drop-shadow(0 0 ${s*.18}px rgba(0,180,255,.55))` }}>
+        <defs>
+          <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#061828"/>
+            <stop offset="100%" stopColor="#030D18"/>
+          </linearGradient>
+          <linearGradient id="borderGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#00D4FF"/>
+            <stop offset="55%" stopColor="#00B4FF"/>
+            <stop offset="100%" stopColor="#0077CC"/>
+          </linearGradient>
+          <linearGradient id="textGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#60E8FF"/>
+            <stop offset="100%" stopColor="#00B4FF"/>
+          </linearGradient>
+        </defs>
+        {/* Hexágono fondo */}
+        <polygon points="24,2 42,12 42,36 24,46 6,36 6,12" fill="url(#bgGrad)"/>
+        {/* Borde exterior con gradiente */}
+        <polygon points="24,2 42,12 42,36 24,46 6,36 6,12" fill="none" stroke="url(#borderGrad)" strokeWidth="1.6"/>
+        {/* Borde interior sutil */}
+        <polygon points="24,5.5 39,14 39,34 24,42.5 9,34 9,14" fill="none" stroke="rgba(0,180,255,0.14)" strokeWidth="0.8"/>
+        {/* Línea decorativa superior */}
+        <line x1="14" y1="18" x2="34" y2="18" stroke="rgba(0,180,255,0.25)" strokeWidth="0.7"/>
+        {/* T — barra horizontal */}
+        <rect x="13" y="20" width="22" height="3.5" rx="1.75" fill="url(#textGrad)"/>
+        {/* T — barra vertical */}
+        <rect x="20.5" y="20" width="7" height="14" rx="1.75" fill="url(#textGrad)"/>
+        {/* 7 — superíndice */}
+        <text x="34.5" y="22" fontFamily="Arial Black,sans-serif" fontWeight="900" fontSize="8.5" fill="#00D4FF" textAnchor="middle" opacity="0.95">7</text>
+        {/* Puntos de nodo en vértices */}
+        <circle cx="24" cy="2" r="1.2" fill="#00B4FF" opacity="0.7"/>
+        <circle cx="42" cy="12" r="1.2" fill="#00B4FF" opacity="0.5"/>
+        <circle cx="42" cy="36" r="1.2" fill="#00B4FF" opacity="0.5"/>
+        <circle cx="6" cy="12" r="1.2" fill="#00B4FF" opacity="0.5"/>
+        <circle cx="6" cy="36" r="1.2" fill="#00B4FF" opacity="0.5"/>
+      </svg>
+      {text && (
+        <div>
+          <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:15.5, letterSpacing:"-.02em", color:C.txt, lineHeight:1 }}>Tempvs7</div>
+          <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:400, fontSize:9, letterSpacing:".18em", color:C.mid, textTransform:"uppercase", marginTop:2 }}>Software Engineering</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -400,8 +444,8 @@ function Contact() {
   const sub = async () => {
     if (!f.name || !f.email || !f.msg) return;
     setSt("loading");
-    // TODO: await supabase.from('contacts').insert([f]);
-    await new Promise(r => setTimeout(r,1400));
+    try { await saveContact(f); } catch(e) { console.error(e); }
+    await new Promise(r => setTimeout(r,600));
     setSt("ok"); setF({ name:"", email:"", phone:"", service:"", msg:"" });
     setTimeout(() => setSt("idle"), 5000);
   };
@@ -580,7 +624,10 @@ function Admin({ data, onSave, onClose }) {
         <div style={{ padding:"16px 24px", borderBottom:`1px solid ${C.brd}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}><Mark size={32} text/><span style={{ color:C.mid, fontSize:13 }}>/ Admin</span></div>
           <div style={{ display:"flex", gap:10 }}>
-            <button onClick={() => { onSave({ projects, sectors, social }); }} style={{ background:C.ac,color:C.bg,border:"none",padding:"8px 18px",borderRadius:8,cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:13 }}>Guardar</button>
+            <button onClick={async () => {
+              try { await updateSocial(social); } catch(e) { console.error(e); }
+              onSave({ projects, sectors, social });
+            }} style={{ background:C.ac,color:C.bg,border:"none",padding:"8px 18px",borderRadius:8,cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:13 }}>Guardar</button>
             <button onClick={onClose} style={{ background:C.bgS,border:`1px solid ${C.brd}`,borderRadius:8,width:34,height:34,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}><X size={15} color={C.mid}/></button>
           </div>
         </div>
@@ -643,7 +690,13 @@ function Admin({ data, onSave, onClose }) {
 export default function App() {
   const [admin, setAdmin] = useState(false);
   const [data, setData] = useState({ projects:DEF_PROJECTS, sectors:DEF_SECTORS, social:DEF_SOCIAL });
+
   useEffect(() => {
+    // Cargar datos desde Supabase
+    getProjects().then(p => setData(d => ({...d, projects:p}))).catch(() => {});
+    getSectors().then(s => setData(d => ({...d, sectors:s}))).catch(() => {});
+    getSocialLinks().then(s => setData(d => ({...d, social:s}))).catch(() => {});
+    // Atajo teclado admin
     const fn = e => { if(e.ctrlKey&&e.shiftKey&&e.key==="A") setAdmin(true); };
     window.addEventListener("keydown", fn);
     return () => window.removeEventListener("keydown", fn);

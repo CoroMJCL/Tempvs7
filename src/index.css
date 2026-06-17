@@ -1,0 +1,2 @@
+/* Reset mínimo — el resto lo maneja App.jsx */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

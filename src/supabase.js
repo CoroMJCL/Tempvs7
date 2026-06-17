@@ -20,9 +20,17 @@ export async function getProjects() {
 
 export async function saveProject(p) {
   const { error } = await supabase.from("projects").insert({
-    title:p.title, description:p.desc, url:p.url,
+    title:p.title, description:p.desc, url:p.url||null,
     img1:p.imgs[0], img2:p.imgs[1], img3:p.imgs[2], tags:p.tags,
   });
+  if (error) throw error;
+}
+
+export async function updateProject(p) {
+  const { error } = await supabase.from("projects").update({
+    title:p.title, description:p.desc, url:p.url||null,
+    img1:p.imgs[0], img2:p.imgs[1], img3:p.imgs[2], tags:p.tags,
+  }).eq("id", p.id);
   if (error) throw error;
 }
 

@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import {
   getProjects, getSectors, getSocialLinks,
-  saveContact, saveProject, deleteProject, updateSocial
+  saveContact, saveProject, updateProject, deleteProject, updateSocial
 } from "./supabase.js";
 
 // ═══════════════════════════════════════════════════════
@@ -603,6 +603,13 @@ function Admin({ data, onSave, onClose }) {
   const [sectors, setSectors] = useState(data.sectors);
   const [social, setSocial] = useState({...data.social});
   const [np, setNp] = useState({ title:"", desc:"", url:"", imgs:["","",""], tags:"" });
+  const [editingId, setEditingId] = useState(null);
+
+  const startEdit = (p) => {
+    setEditingId(p.id);
+    setNp({ title:p.title, desc:p.desc, url:p.url==="*"?"":p.url||"", imgs:[...p.imgs], tags:p.tags.join(", ") });
+  };
+  const cancelEdit = () => { setEditingId(null); setNp({ title:"", desc:"", url:"", imgs:["","",""], tags:"" }); };
   const [ns, setNs] = useState("");
   const is = { background:C.bgS, border:`1px solid ${C.brd}`, borderRadius:8, padding:"10px 14px", color:C.txt, fontSize:13, width:"100%", fontFamily:"'Inter',sans-serif", marginBottom:10, boxSizing:"border-box" };
   const tb = t => ({ padding:"10px 16px", border:"none", borderBottom:tab===t?`2px solid ${C.ac}`:"2px solid transparent", background:"none", cursor:"pointer", fontSize:13, fontWeight:500, color:tab===t?C.ac:C.mid, fontFamily:"'Space Grotesk',sans-serif", transition:"color .2s" });
@@ -637,21 +644,53 @@ function Admin({ data, onSave, onClose }) {
         <div style={{ flex:1, overflowY:"auto", padding:24 }}>
           {tab==="projects" && (
             <div>
-              <p style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:14, fontWeight:600, color:C.txt, marginBottom:14 }}>Nuevo Proyecto</p>
+              <p style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:14, fontWeight:600, color:C.txt, marginBottom:14 }}>
+                {editingId ? "Editar Proyecto" : "Nuevo Proyecto"}
+              </p>
               <input value={np.title} onChange={e=>setNp({...np,title:e.target.value})} placeholder="Título *" style={is}/>
               <textarea value={np.desc} onChange={e=>setNp({...np,desc:e.target.value})} placeholder="Descripción" rows={2} style={{...is,resize:"vertical"}}/>
-              <input value={np.url} onChange={e=>setNp({...np,url:e.target.value})} placeholder="URL del proyecto" style={is}/>
+              <input value={np.url} onChange={e=>setNp({...np,url:e.target.value})} placeholder="URL del proyecto (dejar vacío para no mostrar)" style={is}/>
               <input value={np.tags} onChange={e=>setNp({...np,tags:e.target.value})} placeholder="Tags: React, AWS, Node.js" style={is}/>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:10 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:12 }}>
                 {[0,1,2].map(i => <input key={i} value={np.imgs[i]} onChange={e=>{ const imgs=[...np.imgs]; imgs[i]=e.target.value; setNp({...np,imgs}); }} placeholder={`URL imagen ${i+1}`} style={{...is,marginBottom:0}}/>)}
               </div>
-              <button onClick={() => { if(!np.title)return; setProjects([...projects,{id:Date.now(),...np,tags:np.tags.split(",").map(t=>t.trim()).filter(Boolean)}]); setNp({title:"",desc:"",url:"",imgs:["","",""],tags:""}); }} style={{ background:C.ac,color:C.bg,border:"none",padding:"9px 20px",borderRadius:8,cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:6,marginBottom:24 }}>
-                <Plus size={14}/> Agregar
-              </button>
+              <div style={{ display:"flex", gap:8, marginBottom:24 }}>
+                <button onClick={async () => {
+                  if(!np.title) return;
+                  const tags = np.tags.split(",").map(t=>t.trim()).filter(Boolean);
+                  if(editingId) {
+                    const updated = {...np, id:editingId, tags};
+                    try { await updateProject(updated); } catch(e) { console.error(e); }
+                    setProjects(projects.map(x => x.id===editingId ? updated : x));
+                    cancelEdit();
+                  } else {
+                    const p = {id:Date.now(),...np,tags};
+                    try { await saveProject(p); } catch(e) { console.error(e); }
+                    setProjects([...projects, p]);
+                    setNp({title:"",desc:"",url:"",imgs:["","",""],tags:""});
+                  }
+                }} style={{ background:C.ac,color:C.bg,border:"none",padding:"9px 20px",borderRadius:8,cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:6 }}>
+                  {editingId ? <><Check size={14}/> Guardar cambios</> : <><Plus size={14}/> Agregar</>}
+                </button>
+                {editingId && (
+                  <button onClick={cancelEdit} style={{ background:"transparent",border:`1px solid ${C.brd}`,color:C.mid,padding:"9px 16px",borderRadius:8,cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontSize:13 }}>
+                    Cancelar
+                  </button>
+                )}
+              </div>
+              <p style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:12, fontWeight:600, color:C.mid, marginBottom:10, letterSpacing:".08em", textTransform:"uppercase" }}>Proyectos actuales</p>
               {projects.map(p => (
-                <div key={p.id} style={{ background:C.bgS,border:`1px solid ${C.brd}`,borderRadius:10,padding:"12px 16px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
-                  <div><div style={{ fontWeight:600,fontSize:13,color:C.txt,marginBottom:2 }}>{p.title}</div><div style={{ color:C.mid,fontSize:12 }}>{p.url||"Sin URL"}</div></div>
-                  <button onClick={() => setProjects(projects.filter(x=>x.id!==p.id))} style={{ background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.25)",borderRadius:7,padding:"5px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:4 }}><Trash2 size={13} color="#F87171"/></button>
+                <div key={p.id} style={{ background:C.bgS, border:`1px solid ${editingId===p.id ? C.ac : C.brd}`, borderRadius:10, padding:"12px 16px", marginBottom:8, transition:"border-color .2s" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8 }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:600, fontSize:13, color:C.txt, marginBottom:2 }}>{p.title}</div>
+                      <div style={{ color:p.url && p.url!=="*" ? C.ac : C.mid, fontSize:11.5 }}>{p.url && p.url!=="*" ? p.url : "Sin URL pública"}</div>
+                    </div>
+                    <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                      <button onClick={() => startEdit(p)} style={{ background:C.acT,border:`1px solid ${C.brd}`,borderRadius:7,padding:"5px 12px",cursor:"pointer",color:C.ac,fontSize:12,fontWeight:500 }}>Editar</button>
+                      <button onClick={async () => { try { await deleteProject(p.id); } catch(e){} setProjects(projects.filter(x=>x.id!==p.id)); }} style={{ background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.25)",borderRadius:7,padding:"5px 10px",cursor:"pointer",display:"flex",alignItems:"center" }}><Trash2 size={13} color="#F87171"/></button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

@@ -316,7 +316,7 @@ function Estimador() {
     if (desc.trim().length < 30) { setError("Describe tu proyecto con más detalle para un análisis preciso."); return; }
     setLoading(true); setResult(null); setError("");
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/ai", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-sonnet-4-6", max_tokens:1000,
@@ -722,7 +722,7 @@ function ChatBot() {
     const txt = inp.trim(); setInp("");
     setMsgs(p => [...p, {r:"u", c:txt}]); setLoad(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/ai", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-sonnet-4-6", max_tokens:350,

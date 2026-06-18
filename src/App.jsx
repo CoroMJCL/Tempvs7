@@ -25,11 +25,11 @@ const C = {
   acD: "#0088CC",       // azul más profundo
   acT: "rgba(0,180,255,0.08)",
   acG: "rgba(0,180,255,0.18)",
-  brd: "rgba(0,180,255,0.14)",
-  brdH:"rgba(0,180,255,0.4)",
-  txt: "#D8E8F8",
-  mid: "#4A6A88",
-  lgt: "#2A4A68",
+  brd: "rgba(0,180,255,0.18)",
+  brdH:"rgba(0,180,255,0.5)",
+  txt: "#EDF4FF",       // texto principal — más brillante
+  mid: "#8BAEC8",       // texto secundario — mucho más legible
+  lgt: "#5A7A9A",       // texto tenue
   wht: "#FFFFFF",
 };
 

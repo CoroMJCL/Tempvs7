@@ -1226,6 +1226,254 @@ function ChatBot() {
 
 
 
+
+// ── IMAGE UPLOADER ────────────────────────────────────────────────
+function ImageUploader({ value, onChange, label }) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+  const handleFile = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    try { const url = await uploadImage(file); onChange(url); }
+    catch { alert("Error al subir. Verifica que el bucket 'images' sea público en Supabase → Storage."); }
+    setUploading(false);
+  };
+  return (
+    <div style={{ marginBottom:12 }}>
+      <label style={{ fontSize:11, fontWeight:500, color:"#6B7280", display:"block", marginBottom:6 }}>{label}</label>
+      {value && (
+        <div style={{ position:"relative", marginBottom:8 }}>
+          <img src={value} alt="" style={{ width:"100%", height:120, objectFit:"cover", borderRadius:9, display:"block", border:"1px solid #DDE1E8" }}/>
+          <button onClick={() => onChange("")} style={{ position:"absolute", top:6, right:6, background:"rgba(0,0,0,.7)", border:"none", borderRadius:"50%", width:24, height:24, cursor:"pointer", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center" }}><X size={12}/></button>
+        </div>
+      )}
+      <div style={{ display:"flex", gap:8 }}>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e => handleFile(e.target.files[0])}/>
+        <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ background:uploading?"#F4F6F9":"#EEF2FF", border:"1px solid #DDE1E8", borderRadius:8, padding:"9px 14px", cursor:uploading?"not-allowed":"pointer", color:uploading?"#9CA3AF":"#4338CA", fontSize:12, fontWeight:600, fontFamily:"'Space Grotesk',sans-serif", display:"flex", alignItems:"center", gap:6, flexShrink:0, whiteSpace:"nowrap" }}>
+          {uploading ? <><div style={{ width:12,height:12,border:"2px solid rgba(67,56,202,.3)",borderTopColor:"#4338CA",borderRadius:"50%",animation:"spn 1s linear infinite" }}/>Subiendo...</> : "↑ Subir foto"}
+        </button>
+        <input value={value} onChange={e => onChange(e.target.value)} placeholder="O pega una URL..." style={{ flex:1, background:"#F4F6F9", border:"1px solid #DDE1E8", borderRadius:8, padding:"9px 12px", color:"#1A1D23", fontSize:12, fontFamily:"'Inter',sans-serif" }}/>
+      </div>
+    </div>
+  );
+}
+
+// ── ADMIN PANEL ───────────────────────────────────────────────────
+function Admin({ data, onSave, onClose }) {
+  const A = { bg:"#FFFFFF", surface:"#F4F6F9", border:"#DDE1E8", text:"#1A1D23", mid:"#6B7280", ac:C.ac };
+  const [auth, setAuth] = useState(false);
+  const [email, setEmail] = useState("");
+  const [pwd, setPwd] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [tab, setTab] = useState("projects");
+  const [projects, setProjects] = useState(data.projects);
+  const [sectors, setSectors] = useState(data.sectors);
+  const [social, setSocial] = useState({...data.social});
+  const [np, setNp] = useState({ title:"", desc:"", url:"", imgs:["","",""], tags:"" });
+  const [editingId, setEditingId] = useState(null);
+  const [ns, setNs] = useState("");
+  const [contacts, setContacts] = useState([]);
+  const [contactsLoaded, setContactsLoaded] = useState(false);
+  const [aiReply, setAiReply] = useState({});
+  const [loadingReply, setLoadingReply] = useState(null);
+
+  const is = { background:A.surface, border:`1px solid ${A.border}`, borderRadius:8, padding:"10px 14px", color:A.text, fontSize:13, width:"100%", fontFamily:"'Inter',sans-serif", marginBottom:10, boxSizing:"border-box" };
+  const tb = t => ({ padding:"10px 16px", border:"none", borderBottom:tab===t?`2px solid ${A.ac}`:"2px solid transparent", background:A.bg, cursor:"pointer", fontSize:13, fontWeight:500, color:tab===t?A.ac:A.mid, fontFamily:"'Space Grotesk',sans-serif", transition:"color .2s" });
+
+  const handleLogin = async () => {
+    if (!email || !pwd) return;
+    setLoginLoading(true); setLoginError("");
+    try { await adminLogin(email, pwd); setAuth(true); }
+    catch { setLoginError("Email o contraseña incorrectos"); }
+    setLoginLoading(false);
+  };
+
+  const handleClose = async () => { await adminLogout(); onClose(); };
+
+  const startEdit = (p) => { setEditingId(p.id); setNp({ title:p.title, desc:p.desc, url:p.url||"", imgs:[...p.imgs], tags:p.tags.join(", ") }); };
+  const cancelEdit = () => { setEditingId(null); setNp({ title:"", desc:"", url:"", imgs:["","",""], tags:"" }); };
+
+  const loadContacts = async () => {
+    if (contactsLoaded) return;
+    try { const c = await getContacts(); setContacts(c); setContactsLoaded(true); } catch(e) { console.error(e); }
+  };
+
+  const suggestReply = async (c) => {
+    setLoadingReply(c.id);
+    try {
+      const res = await fetch("/api/ai", { method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ system:"Eres Maximo Henriquez de Tempvs7. Redacta una respuesta profesional, cálida y directa a este mensaje de un potencial cliente. Máximo 5 líneas. Propón una llamada o videollamada gratuita.", messages:[{ role:"user", content:`Nombre: ${c.name}. Email: ${c.email}. Servicio: ${c.service||"no especificado"}. Mensaje: ${c.message}` }], max_tokens:250 }) });
+      const d = await res.json(); const text = d.content?.[0]?.text||"";
+      setAiReply(prev => ({...prev, [c.id]:text}));
+    } catch { setAiReply(prev => ({...prev, [c.id]:"Error al generar respuesta."})); }
+    setLoadingReply(null);
+  };
+
+  if (!auth) return (
+    <div style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(0,0,0,.6)", backdropFilter:"blur(8px)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ background:A.bg, borderRadius:20, padding:44, textAlign:"center", maxWidth:380, width:"100%", margin:24, boxShadow:"0 24px 80px rgba(0,0,0,.3)" }}>
+        <Mark size={52}/><div style={{ height:20 }}/>
+        <h3 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:20, fontWeight:700, color:A.text, marginBottom:6 }}>Panel Admin</h3>
+        <p style={{ fontSize:13, color:A.mid, marginBottom:28 }}>Acceso con tu cuenta Supabase</p>
+        <div style={{ textAlign:"left", marginBottom:12 }}>
+          <label style={{ fontSize:11, fontWeight:500, color:A.mid, display:"block", marginBottom:5 }}>EMAIL</label>
+          <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleLogin()} placeholder="tu@email.com" style={{ ...is, marginBottom:0 }}/>
+        </div>
+        <div style={{ textAlign:"left", marginBottom:20 }}>
+          <label style={{ fontSize:11, fontWeight:500, color:A.mid, display:"block", marginBottom:5 }}>CONTRASEÑA</label>
+          <input type="password" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleLogin()} placeholder="••••••••" style={{ ...is, marginBottom:0 }}/>
+        </div>
+        {loginError && <p style={{ color:"#EF4444", fontSize:12, marginBottom:14 }}>{loginError}</p>}
+        <button onClick={handleLogin} disabled={loginLoading} style={{ background:A.ac, color:"#fff", border:"none", padding:"13px", borderRadius:9, cursor:loginLoading?"not-allowed":"pointer", fontFamily:"'Space Grotesk',sans-serif", fontWeight:600, fontSize:14, width:"100%", marginBottom:12, opacity:loginLoading?.7:1, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+          {loginLoading ? <><div style={{ width:16,height:16,border:"2px solid rgba(255,255,255,.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spn 1s linear infinite" }}/>Verificando...</> : "Ingresar"}
+        </button>
+        <button onClick={onClose} style={{ background:"none", border:"none", cursor:"pointer", color:A.mid, fontSize:13 }}>Cancelar</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(0,0,0,.55)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:A.bg, borderRadius:20, width:"100%", maxWidth:700, maxHeight:"90vh", overflow:"hidden", display:"flex", flexDirection:"column", boxShadow:"0 24px 80px rgba(0,0,0,.3)" }}>
+        <div style={{ padding:"16px 24px", borderBottom:`1px solid ${A.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", background:A.bg }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}><Mark size={32} text/><span style={{ color:A.mid, fontSize:13 }}>/ Admin</span></div>
+          <div style={{ display:"flex", gap:10 }}>
+            <button onClick={async () => { try { await updateSocial(social); } catch(e) { console.error(e); } onSave({ projects, sectors, social }); }} style={{ background:A.ac, color:"#fff", border:"none", padding:"8px 18px", borderRadius:8, cursor:"pointer", fontFamily:"'Space Grotesk',sans-serif", fontWeight:600, fontSize:13 }}>Guardar</button>
+            <button onClick={handleClose} style={{ background:A.surface, border:`1px solid ${A.border}`, borderRadius:8, width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}><X size={15} color={A.mid}/></button>
+          </div>
+        </div>
+
+        <div style={{ display:"flex", borderBottom:`1px solid ${A.border}`, padding:"0 16px", background:A.bg, overflowX:"auto" }}>
+          {["projects","sectors","social","contactos"].map(t => (
+            <button key={t} style={tb(t)} onClick={() => { setTab(t); if(t==="contactos") loadContacts(); }}>
+              {{ projects:"Proyectos", sectors:"Sectores", social:"Redes", contactos:"Contactos" }[t]}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ flex:1, overflowY:"auto", padding:24, background:A.bg }}>
+          {tab==="projects" && (
+            <div>
+              <p style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:14, fontWeight:600, color:A.text, marginBottom:14 }}>{editingId?"Editar Proyecto":"Nuevo Proyecto"}</p>
+              <input value={np.title} onChange={e=>setNp({...np,title:e.target.value})} placeholder="Título *" style={is}/>
+              <div style={{ position:"relative", marginBottom:10 }}>
+                <textarea value={np.desc} onChange={e=>setNp({...np,desc:e.target.value})} placeholder="Descripción del proyecto..." rows={3} style={{...is,marginBottom:0,paddingRight:140,resize:"vertical"}}/>
+                <button onClick={async()=>{
+                  if(!np.title){alert("Escribe primero el título.");return;}
+                  const btn=document.getElementById("aiDescBtn"); if(btn){btn.textContent="Generando...";btn.disabled=true;}
+                  try{
+                    const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system:"Genera una descripción profesional y concisa (máximo 50 palabras) para un proyecto de desarrollo web. Solo la descripción, sin comillas.",messages:[{role:"user",content:`Proyecto: ${np.title}. Tags: ${np.tags||"desarrollo web"}`}],max_tokens:150})});
+                    const d=await res.json(); const desc=d.content?.[0]?.text||"";
+                    setNp(prev=>({...prev,desc:desc.trim()}));
+                  }catch{}
+                  if(btn){btn.textContent="✨ IA";btn.disabled=false;}
+                }} id="aiDescBtn" style={{ position:"absolute",top:8,right:8,background:A.ac,color:"#fff",border:"none",borderRadius:7,padding:"5px 12px",cursor:"pointer",fontSize:11,fontWeight:600,fontFamily:"'Space Grotesk',sans-serif",whiteSpace:"nowrap" }}>✨ IA</button>
+              </div>
+              <input value={np.url} onChange={e=>setNp({...np,url:e.target.value})} placeholder="URL del proyecto (vacío = sin link)" style={is}/>
+              <input value={np.tags} onChange={e=>setNp({...np,tags:e.target.value})} placeholder="Tags: React, AWS, Node.js" style={is}/>
+              <ImageUploader label="Imagen principal *" value={np.imgs[0]} onChange={v=>setNp({...np,imgs:[v,np.imgs[1],np.imgs[2]]})}/>
+              <ImageUploader label="Imagen 2 (opcional)" value={np.imgs[1]} onChange={v=>setNp({...np,imgs:[np.imgs[0],v,np.imgs[2]]})}/>
+              <ImageUploader label="Imagen 3 (opcional)" value={np.imgs[2]} onChange={v=>setNp({...np,imgs:[np.imgs[0],np.imgs[1],v]})}/>
+              <div style={{ display:"flex", gap:8, marginBottom:24 }}>
+                <button onClick={async()=>{
+                  if(!np.title)return;
+                  const tags=np.tags.split(",").map(t=>t.trim()).filter(Boolean);
+                  if(editingId){
+                    const updated={...np,id:editingId,tags};
+                    try{await updateProject(updated);}catch(e){console.error(e);}
+                    setProjects(projects.map(x=>x.id===editingId?updated:x)); cancelEdit();
+                  } else {
+                    const p={id:Date.now(),...np,tags};
+                    try{await saveProject(p);}catch(e){console.error(e);}
+                    setProjects([...projects,p]); setNp({title:"",desc:"",url:"",imgs:["","",""],tags:""});
+                  }
+                }} style={{ background:A.ac,color:"#fff",border:"none",padding:"9px 20px",borderRadius:8,cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:6 }}>
+                  {editingId?<><Check size={14}/>Guardar cambios</>:<><Plus size={14}/>Agregar</>}
+                </button>
+                {editingId && <button onClick={cancelEdit} style={{ background:"transparent",border:`1px solid ${A.border}`,color:A.mid,padding:"9px 16px",borderRadius:8,cursor:"pointer",fontSize:13 }}>Cancelar</button>}
+              </div>
+              <p style={{ fontSize:12,fontWeight:600,color:A.mid,marginBottom:10,letterSpacing:".08em",textTransform:"uppercase" }}>Proyectos actuales</p>
+              {projects.map(p => (
+                <div key={p.id} style={{ background:A.surface,border:`1px solid ${editingId===p.id?A.ac:A.border}`,borderRadius:10,padding:"12px 16px",marginBottom:8,transition:"border-color .2s" }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8 }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:600,fontSize:13,color:A.text,marginBottom:2 }}>{p.title}</div>
+                      <div style={{ color:p.url&&p.url!=="*"?A.ac:A.mid,fontSize:11.5 }}>{p.url&&p.url!=="*"?p.url:"Sin URL pública"}</div>
+                    </div>
+                    <div style={{ display:"flex",gap:6,flexShrink:0 }}>
+                      <button onClick={()=>startEdit(p)} style={{ background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:7,padding:"5px 12px",cursor:"pointer",color:"#4338CA",fontSize:12,fontWeight:500 }}>Editar</button>
+                      <button onClick={async()=>{try{await deleteProject(p.id);}catch(e){}setProjects(projects.filter(x=>x.id!==p.id));}} style={{ background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.25)",borderRadius:7,padding:"5px 10px",cursor:"pointer",display:"flex",alignItems:"center" }}><Trash2 size={13} color="#F87171"/></button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {tab==="sectors" && (
+            <div>
+              <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:14,fontWeight:600,color:A.text,marginBottom:6 }}>Sectores que atiendes</p>
+              <p style={{ fontSize:12,color:A.mid,marginBottom:18 }}>Aparecen en el carrusel del sitio.</p>
+              <div style={{ display:"flex",gap:8,marginBottom:24 }}>
+                <input value={ns} onChange={e=>setNs(e.target.value)} onKeyDown={async e=>{if(e.key==="Enter"&&ns.trim()){try{await addSector(ns.trim());}catch{}setSectors([...sectors,ns.trim()]);setNs("");}}} placeholder="Ej: Tecnología, Retail..." style={{...is,marginBottom:0,flex:1}}/>
+                <button onClick={async()=>{if(!ns.trim())return;try{await addSector(ns.trim());}catch{}setSectors([...sectors,ns.trim()]);setNs("");}} style={{ background:A.ac,color:"#fff",border:"none",padding:"0 18px",borderRadius:8,cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:13,flexShrink:0,display:"flex",alignItems:"center",gap:5 }}><Plus size={14}/>Agregar</button>
+              </div>
+              <div style={{ display:"flex",flexWrap:"wrap",gap:8 }}>
+                {sectors.map((s,i) => (
+                  <div key={i} style={{ background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:20,padding:"7px 15px",display:"flex",alignItems:"center",gap:8,fontSize:13,fontWeight:500,color:"#3730A3" }}>
+                    {s}<button onClick={async()=>{try{await removeSector(s);}catch{}setSectors(sectors.filter((_,x)=>x!==i));}} style={{ background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",opacity:.6 }}><X size={13} color="#6B7280"/></button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tab==="social" && (
+            <div>
+              <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:14,fontWeight:600,color:A.text,marginBottom:20 }}>Redes Sociales</p>
+              {[{k:"linkedin",lbl:"LinkedIn URL"},{k:"instagram",lbl:"Instagram URL"}].map(s => (
+                <div key={s.k}><label style={{ fontSize:12,fontWeight:500,color:A.mid,display:"block",marginBottom:6 }}>{s.lbl}</label><input value={social[s.k]||""} onChange={e=>setSocial({...social,[s.k]:e.target.value})} placeholder={`URL de ${s.lbl}`} style={is}/></div>
+              ))}
+            </div>
+          )}
+
+          {tab==="contactos" && (
+            <div>
+              <p style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:14,fontWeight:600,color:A.text,marginBottom:6 }}>Mensajes recibidos</p>
+              <p style={{ fontSize:12,color:A.mid,marginBottom:20 }}>Formulario de contacto y chatbot.</p>
+              {contacts.length===0 && <p style={{ color:A.mid,fontSize:13 }}>No hay mensajes aún.</p>}
+              {contacts.map(c => (
+                <div key={c.id} style={{ background:A.surface,border:`1px solid ${A.border}`,borderRadius:12,padding:18,marginBottom:12 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10,flexWrap:"wrap",gap:8 }}>
+                    <div><div style={{ fontWeight:600,fontSize:14,color:A.text }}>{c.name}</div><div style={{ fontSize:12,color:A.mid }}>{c.email}{c.phone&&` · ${c.phone}`}</div></div>
+                    <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+                      {c.service&&<span style={{ fontSize:11,padding:"3px 10px",borderRadius:20,background:"#EEF2FF",color:"#4338CA",border:"1px solid #C7D2FE",fontWeight:500 }}>{c.service}</span>}
+                      <span style={{ fontSize:11,color:A.mid }}>{new Date(c.created_at).toLocaleDateString("es-CL")}</span>
+                    </div>
+                  </div>
+                  <p style={{ fontSize:13.5,color:A.text,lineHeight:1.65,marginBottom:12,background:A.bg,borderRadius:8,padding:"10px 14px" }}>{c.message}</p>
+                  {aiReply[c.id] ? (
+                    <div style={{ background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:10,padding:14,marginBottom:10 }}>
+                      <div style={{ fontSize:11,color:"#16A34A",fontWeight:600,marginBottom:6,letterSpacing:".06em" }}>✦ RESPUESTA SUGERIDA</div>
+                      <p style={{ fontSize:13,color:"#1F2937",lineHeight:1.7,whiteSpace:"pre-wrap" }}>{aiReply[c.id]}</p>
+                      <a href={`mailto:${c.email}?subject=Re: Tu consulta en Tempvs7&body=${encodeURIComponent(aiReply[c.id])}`} style={{ display:"inline-flex",alignItems:"center",gap:6,marginTop:10,fontSize:12,fontWeight:600,color:"#16A34A",textDecoration:"none" }}>Abrir en mail →</a>
+                    </div>
+                  ) : (
+                    <button onClick={()=>suggestReply(c)} disabled={loadingReply===c.id} style={{ background:A.ac,color:"#fff",border:"none",padding:"8px 18px",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"'Space Grotesk',sans-serif",display:"flex",alignItems:"center",gap:6,opacity:loadingReply===c.id?.7:1 }}>
+                      {loadingReply===c.id?"✦ Generando...":"✦ Sugerir respuesta con IA"}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── APP ROOT ─────────────────────────────────────────────────────
 export default function App() {
   const [admin, setAdmin] = useState(false);

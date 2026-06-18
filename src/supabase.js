@@ -77,3 +77,18 @@ export async function updateProject(p) {
   }).eq("id", p.id);
   if (error) throw error;
 }
+
+export async function adminLogin(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
+}
+
+export async function adminLogout() {
+  await supabase.auth.signOut();
+}
+
+export async function getAdminSession() {
+  const { data } = await supabase.auth.getSession();
+  return data.session;
+}

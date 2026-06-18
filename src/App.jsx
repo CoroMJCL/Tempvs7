@@ -6,7 +6,8 @@ import {
 } from "lucide-react";
 import {
   getProjects, getSectors, getSocialLinks,
-  saveContact, saveProject, updateProject, deleteProject, updateSocial, uploadImage
+  saveContact, saveProject, updateProject, deleteProject,
+  updateSocial, uploadImage, adminLogin, adminLogout
 } from "./supabase.js";
 
 // ═══════════════════════════════════════════════════════
@@ -648,7 +649,27 @@ function ImageUploader({ value, onChange, label }) {
 // ── ADMIN ────────────────────────────────────────────────────────
 function Admin({ data, onSave, onClose }) {
   const [auth, setAuth] = useState(false);
+  const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
+
+  const handleLogin = async () => {
+    if (!email || !pwd) return;
+    setLoginLoading(true); setLoginError("");
+    try {
+      await adminLogin(email, pwd);
+      setAuth(true);
+    } catch(e) {
+      setLoginError("Email o contraseña incorrectos");
+    }
+    setLoginLoading(false);
+  };
+
+  const handleClose = async () => {
+    await adminLogout();
+    onClose();
+  };
   const [tab, setTab] = useState("projects");
   const [projects, setProjects] = useState(data.projects);
   const [sectors, setSectors] = useState(data.sectors);
@@ -665,13 +686,36 @@ function Admin({ data, onSave, onClose }) {
   const is = { background:C.bgS, border:`1px solid ${C.brd}`, borderRadius:8, padding:"10px 14px", color:C.txt, fontSize:13, width:"100%", fontFamily:"'Inter',sans-serif", marginBottom:10, boxSizing:"border-box" };
   const tb = t => ({ padding:"10px 16px", border:"none", borderBottom:tab===t?`2px solid ${C.ac}`:"2px solid transparent", background:"none", cursor:"pointer", fontSize:13, fontWeight:500, color:tab===t?C.ac:C.mid, fontFamily:"'Space Grotesk',sans-serif", transition:"color .2s" });
   if (!auth) return (
-    <div style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(2,5,10,.85)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div style={{ background:C.bgC, border:`1px solid ${C.brd}`, borderRadius:20, padding:48, textAlign:"center", maxWidth:360, width:"100%", margin:24, boxShadow:`0 0 60px ${C.acT}` }}>
-        <Mark size={48}/><div style={{ height:22 }}/>
+    <div style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(2,5,10,.9)", backdropFilter:"blur(8px)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ background:C.bgC, border:`1px solid ${C.brd}`, borderRadius:20, padding:44, textAlign:"center", maxWidth:380, width:"100%", margin:24, boxShadow:`0 0 60px ${C.acT}` }}>
+        <Mark size={52}/><div style={{ height:20 }}/>
         <h3 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:20, fontWeight:700, color:C.txt, marginBottom:6 }}>Panel Admin</h3>
-        <p style={{ fontSize:13, color:C.mid, marginBottom:24 }}>Acceso restringido</p>
-        <input type="password" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==="Enter"&&(pwd==="tempvs7"?setAuth(true):alert("Contraseña incorrecta"))} placeholder="Contraseña" style={{ ...is, textAlign:"center", marginBottom:14 }}/>
-        <button onClick={() => pwd==="tempvs7"?setAuth(true):alert("Contraseña incorrecta")} style={{ background:C.ac,color:C.bg,border:"none",padding:"12px",borderRadius:9,cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:14,width:"100%",marginBottom:10 }}>Ingresar</button>
+        <p style={{ fontSize:13, color:C.mid, marginBottom:28 }}>Acceso con tu cuenta Supabase</p>
+        <div style={{ textAlign:"left", marginBottom:12 }}>
+          <label style={{ fontSize:11, fontWeight:500, color:C.mid, display:"block", marginBottom:5 }}>EMAIL</label>
+          <input type="email" value={email} onChange={e=>setEmail(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&handleLogin()}
+            placeholder="admin@tudominio.com"
+            style={{ ...is, marginBottom:0 }}/>
+        </div>
+        <div style={{ textAlign:"left", marginBottom:20 }}>
+          <label style={{ fontSize:11, fontWeight:500, color:C.mid, display:"block", marginBottom:5 }}>CONTRASEÑA</label>
+          <input type="password" value={pwd} onChange={e=>setPwd(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&handleLogin()}
+            placeholder="••••••••"
+            style={{ ...is, marginBottom:0 }}/>
+        </div>
+        {loginError && <p style={{ color:"#F87171", fontSize:12, marginBottom:14 }}>{loginError}</p>}
+        <button onClick={handleLogin} disabled={loginLoading} style={{
+          background:C.ac, color:C.bg, border:"none", padding:"13px", borderRadius:9,
+          cursor:loginLoading?"not-allowed":"pointer", fontFamily:"'Space Grotesk',sans-serif",
+          fontWeight:600, fontSize:14, width:"100%", marginBottom:12,
+          opacity:loginLoading?.7:1, display:"flex", alignItems:"center", justifyContent:"center", gap:8
+        }}>
+          {loginLoading
+            ? <><div style={{ width:16,height:16,border:"2px solid rgba(0,0,0,.3)",borderTopColor:C.bg,borderRadius:"50%",animation:"spn 1s linear infinite" }}/>Verificando...</>
+            : "Ingresar"}
+        </button>
         <button onClick={onClose} style={{ background:"none",border:"none",cursor:"pointer",color:C.mid,fontSize:13 }}>Cancelar</button>
       </div>
     </div>
@@ -686,7 +730,7 @@ function Admin({ data, onSave, onClose }) {
               try { await updateSocial(social); } catch(e) { console.error(e); }
               onSave({ projects, sectors, social });
             }} style={{ background:C.ac,color:C.bg,border:"none",padding:"8px 18px",borderRadius:8,cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:13 }}>Guardar</button>
-            <button onClick={onClose} style={{ background:C.bgS,border:`1px solid ${C.brd}`,borderRadius:8,width:34,height:34,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}><X size={15} color={C.mid}/></button>
+            <button onClick={handleClose} style={{ background:C.bgS,border:`1px solid ${C.brd}`,borderRadius:8,width:34,height:34,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}><X size={15} color={C.mid}/></button>
           </div>
         </div>
         <div style={{ display:"flex", borderBottom:`1px solid ${C.brd}`, padding:"0 16px" }}>

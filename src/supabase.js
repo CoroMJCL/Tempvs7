@@ -92,3 +92,13 @@ export async function getAdminSession() {
   const { data } = await supabase.auth.getSession();
   return data.session;
 }
+
+export async function addSector(name) {
+  const { error } = await supabase.from("clients").insert({ name, active:true });
+  if (error) throw error;
+}
+
+export async function removeSector(name) {
+  const { error } = await supabase.from("clients").delete().eq("name", name);
+  if (error) throw error;
+}

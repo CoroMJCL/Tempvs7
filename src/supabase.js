@@ -102,3 +102,13 @@ export async function removeSector(name) {
   const { error } = await supabase.from("clients").delete().eq("name", name);
   if (error) throw error;
 }
+
+export async function getContacts() {
+  const { data, error } = await supabase
+    .from("contacts")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return data;
+}

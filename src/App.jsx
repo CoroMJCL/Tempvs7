@@ -8,7 +8,7 @@ import {
   getProjects, getSectors, getSocialLinks,
   saveContact, saveProject, updateProject, deleteProject,
   updateSocial, uploadImage, adminLogin, adminLogout,
-  addSector, removeSector
+  addSector, removeSector, getContacts
 } from "./supabase.js";
 
 // ═══════════════════════════════════════════════════════
@@ -175,7 +175,7 @@ function Mark({ size = 36, text = false }) {
 function Navbar({ onAdmin }) {
   const [sc, setSc] = useState(false);
   useEffect(() => { const f = () => setSc(window.scrollY > 40); window.addEventListener("scroll", f); return () => window.removeEventListener("scroll", f); }, []);
-  const lnk = [{ l:"Servicios",h:"#servicios" },{ l:"Análisis IA",h:"#estimador" },{ l:"Proyectos",h:"#proyectos" },{ l:"Sobre mí",h:"#about" },{ l:"Contacto",h:"#contacto" }];
+  const lnk = [{ l:"Servicios",h:"#servicios" },{ l:"Diagnóstico",h:"#diagnostico" },{ l:"ROI",h:"#roi" },{ l:"Proyectos",h:"#proyectos" },{ l:"FAQ",h:"#faq" },{ l:"Contacto",h:"#contacto" }];
   return (
     <nav style={{ position:"fixed", top:0, left:0, right:0, zIndex:100, padding:"0 48px", height:62, display:"flex", alignItems:"center", justifyContent:"space-between", background:sc ? "rgba(4,9,15,.92)" : "transparent", backdropFilter:sc ? "blur(20px)" : "none", borderBottom:sc ? `1px solid ${C.brd}` : "none", transition:"all .35s" }}>
       <Mark text />
@@ -297,6 +297,373 @@ function Services() {
         </div>
         <div className="bento" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14 }}>
           {SVCS.map((s,i) => <BentoCard key={i} svc={s} />)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+
+// ── DIAGNÓSTICO DIGITAL ──────────────────────────────────────────
+const DIAG_Q = [
+  { q:"¿Cómo gestionas hoy tus ventas o pedidos?", opts:["Papel o de memoria","Excel o planillas","WhatsApp / email","Sistema digital propio"] },
+  { q:"¿Cuántos clientes o ventas manejas al mes?", opts:["Menos de 20","20 a 100","100 a 500","Más de 500"] },
+  { q:"¿Cuánta presencia digital tiene tu negocio?", opts:["Sin web ni redes","Solo redes sociales","Tengo web básica","Web + tienda online"] },
+  { q:"¿Cuánto tiempo dedicas a tareas administrativas?", opts:["Menos de 2 hrs/día","2 a 4 hrs/día","4 a 6 hrs/día","Más de 6 hrs/día"] },
+  { q:"¿Qué quieres mejorar primero?", opts:["Conseguir más clientes","Automatizar procesos","Mejorar mi imagen","Todo lo anterior"] },
+];
+
+function Diagnostico() {
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState([]);
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const choose = async (opt) => {
+    const newAnswers = [...answers, opt];
+    setAnswers(newAnswers);
+    if (step < DIAG_Q.length - 1) { setStep(step + 1); return; }
+    setLoading(true);
+    try {
+      const qa = DIAG_Q.map((q, i) => `${q.q}: ${newAnswers[i]}`).join(" | ");
+      const res = await fetch("/api/ai", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          system:`Eres el asesor digital de Tempvs7 en Santiago, Chile. Analiza las respuestas del diagnóstico y responde SOLO en JSON válido:
+{"score":7,"nivel":"Medio","areas":[{"nombre":"Gestión de ventas","estado":"Crítico","impacto":"Pierdes tiempo y clientes por falta de automatización"},{"nombre":"Presencia digital","estado":"Mejorable","impacto":"Descripción del impacto"}],"servicios":["Servicio 1 de Tempvs7 que aplica","Servicio 2"],"mensaje":"2 oraciones directas diciendo qué está perdiendo este negocio sin digitalización y cómo Tempvs7 puede solucionarlo en semanas, no meses."}`,
+          messages:[{ role:"user", content:`Diagnóstico: ${qa}` }],
+          max_tokens:600,
+        }),
+      });
+      const d = await res.json();
+      const text = d.content?.[0]?.text || "";
+      setResult(JSON.parse(text.replace(/```json|```/g,"").trim()));
+    } catch { setResult({ score:5, nivel:"Medio", areas:[], servicios:[], mensaje:"Tu negocio tiene oportunidades claras de mejora digital. Maximo puede ayudarte a identificarlas y ejecutarlas." }); }
+    setLoading(false);
+  };
+
+  const scoreColor = result ? (result.score>=8?"#22C55E":result.score>=5?"#F59E0B":"#EF4444") : C.ac;
+  const pct = result ? (result.score/10)*100 : 0;
+
+  return (
+    <section id="diagnostico" style={{ padding:"96px 60px", background:C.bg, borderTop:`1px solid ${C.brd}` }}>
+      <div style={{ maxWidth:900, margin:"0 auto" }}>
+        <div style={{ marginBottom:48 }}>
+          <div style={{ fontSize:11, fontWeight:600, color:C.ac, letterSpacing:".14em", textTransform:"uppercase", marginBottom:12, fontFamily:"'Space Grotesk',sans-serif" }}>— Diagnóstico Digital Gratis</div>
+          <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:"clamp(26px,3.5vw,44px)", fontWeight:700, color:C.txt, letterSpacing:"-.04em", lineHeight:1.1, marginBottom:14 }}>
+            ¿Está tu negocio<br/><span style={{ color:C.ac }}>perdiendo dinero sin saberlo?</span>
+          </h2>
+          <p style={{ fontSize:15, color:C.mid, lineHeight:1.7 }}>5 preguntas — descubre tu nivel digital y qué hacer primero.</p>
+        </div>
+
+        {!result && !loading && (
+          <div style={{ maxWidth:640, margin:"0 auto" }}>
+            {/* Barra de progreso */}
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+              <span style={{ fontSize:12, color:C.mid }}>Pregunta {step+1} de {DIAG_Q.length}</span>
+              <span style={{ fontSize:12, color:C.ac, fontWeight:600 }}>{Math.round(((step)/DIAG_Q.length)*100)}%</span>
+            </div>
+            <div style={{ height:4, background:C.bgS, borderRadius:2, marginBottom:32, overflow:"hidden" }}>
+              <div style={{ height:"100%", width:`${(step/DIAG_Q.length)*100}%`, background:C.ac, borderRadius:2, transition:"width .4s ease" }}/>
+            </div>
+            <h3 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:"clamp(17px,2.5vw,22px)", fontWeight:600, color:C.txt, marginBottom:24, lineHeight:1.3 }}>
+              {DIAG_Q[step].q}
+            </h3>
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {DIAG_Q[step].opts.map((opt,i) => (
+                <button key={i} onClick={() => choose(opt)} style={{
+                  background:C.bgC, border:`1.5px solid ${C.brd}`, borderRadius:12,
+                  padding:"16px 20px", cursor:"pointer", textAlign:"left",
+                  fontFamily:"'Inter',sans-serif", fontSize:15, color:C.txt,
+                  transition:"all .2s", display:"flex", alignItems:"center", gap:12,
+                }} onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.ac; e.currentTarget.style.background=C.acT; }}
+                  onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.brd; e.currentTarget.style.background=C.bgC; }}>
+                  <span style={{ width:28,height:28,borderRadius:"50%",background:C.bgS,border:`1px solid ${C.brd}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:C.ac,flexShrink:0,fontWeight:600 }}>{i+1}</span>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {loading && (
+          <div style={{ textAlign:"center", padding:"60px 0" }}>
+            <div style={{ width:44,height:44,border:`3px solid ${C.acT}`,borderTopColor:C.ac,borderRadius:"50%",animation:"spn 1s linear infinite",margin:"0 auto 20px" }}/>
+            <p style={{ color:C.mid, fontSize:15 }}>Analizando tu diagnóstico...</p>
+          </div>
+        )}
+
+        {result && (
+          <div style={{ animation:"fup .5s ease both", maxWidth:780, margin:"0 auto" }}>
+            {/* Score */}
+            <div style={{ display:"grid", gridTemplateColumns:"auto 1fr", gap:32, alignItems:"center", background:C.bgC, border:`1.5px solid ${C.brd}`, borderRadius:18, padding:32, marginBottom:20 }}>
+              <div style={{ textAlign:"center" }}>
+                <div style={{ position:"relative", width:110, height:110 }}>
+                  <svg width="110" height="110" viewBox="0 0 110 110">
+                    <circle cx="55" cy="55" r="48" fill="none" stroke={C.bgS} strokeWidth="8"/>
+                    <circle cx="55" cy="55" r="48" fill="none" stroke={scoreColor} strokeWidth="8"
+                      strokeDasharray={`${pct*3.015} 301.5`} strokeLinecap="round" transform="rotate(-90 55 55)"
+                      style={{ transition:"stroke-dasharray 1s ease" }}/>
+                  </svg>
+                  <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                    <span style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:800, fontSize:30, color:scoreColor, lineHeight:1 }}>{result.score}</span>
+                    <span style={{ fontSize:11, color:C.mid }}>de 10</span>
+                  </div>
+                </div>
+                <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:600, fontSize:14, color:scoreColor, marginTop:8 }}>{result.nivel}</div>
+              </div>
+              <div>
+                <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:20, color:C.txt, marginBottom:12 }}>Tu diagnóstico digital</div>
+                {result.areas?.slice(0,2).map((a,i) => (
+                  <div key={i} style={{ display:"flex", gap:10, marginBottom:10, alignItems:"flex-start" }}>
+                    <span style={{ fontSize:11, padding:"2px 8px", borderRadius:5, background:a.estado==="Crítico"?"rgba(239,68,68,.15)":"rgba(245,158,11,.15)", color:a.estado==="Crítico"?"#F87171":"#FCD34D", fontWeight:600, flexShrink:0, marginTop:1 }}>{a.estado}</span>
+                    <div><div style={{ fontSize:13, fontWeight:600, color:C.txt }}>{a.nombre}</div><div style={{ fontSize:12, color:C.mid }}>{a.impacto}</div></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Mensaje y servicios recomendados */}
+            <div style={{ background:`rgba(0,180,255,.06)`, border:`1.5px solid rgba(0,180,255,.22)`, borderRadius:14, padding:22, marginBottom:16 }}>
+              <div style={{ fontSize:10.5, color:C.ac, letterSpacing:".1em", textTransform:"uppercase", marginBottom:8, fontWeight:600 }}>✦ Lo que necesitas</div>
+              <p style={{ fontSize:14, color:C.txt, lineHeight:1.75, marginBottom:14 }}>{result.mensaje}</p>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                {result.servicios?.map(s => <span key={s} style={{ fontSize:12, padding:"4px 12px", borderRadius:6, background:C.acT, color:C.ac, border:`1px solid ${C.brd}`, fontWeight:500 }}>{s}</span>)}
+              </div>
+            </div>
+
+            <button onClick={() => document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})} style={{
+              width:"100%", background:C.ac, color:C.bg, border:"none", padding:"17px",
+              borderRadius:11, cursor:"pointer", fontFamily:"'Space Grotesk',sans-serif",
+              fontWeight:700, fontSize:16, boxShadow:`0 0 30px ${C.acG}`,
+              display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+            }}>
+              Quiero mejorar mi negocio digital <ArrowRight size={18}/>
+            </button>
+            <p style={{ textAlign:"center", fontSize:12, color:C.lgt, marginTop:10 }}>Consulta gratuita · Sin compromiso · Respuesta en 24h</p>
+
+            <button onClick={() => { setStep(0); setAnswers([]); setResult(null); }} style={{ display:"block", margin:"16px auto 0", background:"none", border:"none", cursor:"pointer", color:C.mid, fontSize:13 }}>
+              Repetir diagnóstico
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ── CALCULADORA ROI ───────────────────────────────────────────────
+function ROICalculator() {
+  const [form, setForm] = useState({ employees:"", hours:"", rate:"", process:"" });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const calculate = async () => {
+    const { employees, hours, rate, process } = form;
+    if (!employees || !hours || !rate) return;
+    setLoading(true); setResult(null);
+    const costYear = Number(employees) * Number(hours) * Number(rate) * 260;
+    try {
+      const res = await fetch("/api/ai", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          system:`Eres un asesor de digitalización de Tempvs7 en Chile. Responde SOLO en JSON:
+{"ahorro_pct":75,"roi_meses":8,"mensaje_urgencia":"2 oraciones impactantes sobre el costo de seguir sin software, con números específicos del costo calculado","solucion":"Nombre de la solución concreta que Tempvs7 implementaría para este caso","plazo":"X a Y semanas","beneficios":["beneficio específico 1","beneficio específico 2","beneficio específico 3"]}`,
+          messages:[{ role:"user", content:`Negocio: proceso lento: ${process||"procesos administrativos"}. ${employees} empleados. ${hours} hrs/día en tareas manuales. Costo hora: $${Number(rate).toLocaleString("es-CL")} CLP. Costo anual calculado: $${costYear.toLocaleString("es-CL")} CLP.` }],
+          max_tokens:400,
+        }),
+      });
+      const d = await res.json();
+      const text = d.content?.[0]?.text || "";
+      const parsed = JSON.parse(text.replace(/```json|```/g,"").trim());
+      setResult({ ...parsed, costYear, employees:Number(employees), hours:Number(hours), rate:Number(rate) });
+    } catch { setResult({ ahorro_pct:70, roi_meses:8, mensaje_urgencia:`Estás gastando $${costYear.toLocaleString("es-CL")} CLP al año en tareas manuales. Con software adecuado, podrías reducirlo en un 70% en menos de 3 meses.`, solucion:"Sistema de gestión a medida", plazo:"6 a 10", beneficios:["Reducción de tiempo administrativo","Menos errores humanos","Información en tiempo real"], costYear, employees:Number(employees), hours:Number(hours) }); }
+    setLoading(false);
+  };
+
+  const inp = { background:C.bgS, border:`1.5px solid ${C.brd}`, borderRadius:10, padding:"13px 16px", color:C.txt, fontSize:15, fontFamily:"'Inter',sans-serif", width:"100%", boxSizing:"border-box" };
+
+  return (
+    <section id="roi" style={{ padding:"96px 60px", background:C.bgC, borderTop:`1px solid ${C.brd}` }}>
+      <div style={{ maxWidth:1000, margin:"0 auto" }}>
+        <div style={{ marginBottom:48 }}>
+          <div style={{ fontSize:11, fontWeight:600, color:C.ac, letterSpacing:".14em", textTransform:"uppercase", marginBottom:12, fontFamily:"'Space Grotesk',sans-serif" }}>— Calculadora ROI</div>
+          <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:"clamp(26px,3.5vw,44px)", fontWeight:700, color:C.txt, letterSpacing:"-.04em", lineHeight:1.1, marginBottom:14 }}>
+            ¿Cuánto te cuesta<br/><span style={{ color:C.ac }}>no tener software?</span>
+          </h2>
+          <p style={{ fontSize:15, color:C.mid, lineHeight:1.7 }}>Calcula el costo real de los procesos manuales en tu negocio.</p>
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:40, alignItems:"start" }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+            {[
+              { key:"employees", label:"¿Cuántos empleados tienes?", ph:"Ej: 3", type:"number" },
+              { key:"hours", label:"Horas/día en tareas manuales (por persona)", ph:"Ej: 2", type:"number" },
+              { key:"rate", label:"Costo de la hora de trabajo (CLP)", ph:"Ej: 8000", type:"number" },
+              { key:"process", label:"¿Cuál es el proceso más lento? (opcional)", ph:"Ej: tomar pedidos, hacer facturas...", type:"text" },
+            ].map(f => (
+              <div key={f.key}>
+                <label style={{ fontSize:12.5, fontWeight:500, color:C.mid, display:"block", marginBottom:7 }}>{f.label}</label>
+                <input type={f.type} value={form[f.key]} onChange={e=>setForm({...form,[f.key]:e.target.value})} placeholder={f.ph} style={inp}/>
+              </div>
+            ))}
+            <button onClick={calculate} disabled={loading||!form.employees||!form.hours||!form.rate} style={{
+              background:form.employees&&form.hours&&form.rate?C.ac:C.bgH,
+              color:form.employees&&form.hours&&form.rate?C.bg:C.lgt,
+              border:"none", padding:"15px", borderRadius:10, cursor:form.employees&&form.hours&&form.rate?"pointer":"not-allowed",
+              fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:15,
+              display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+              boxShadow:form.employees&&form.hours&&form.rate?`0 0 24px ${C.acG}`:"none", transition:"all .3s",
+            }}>
+              {loading?<><div style={{ width:18,height:18,border:"2px solid rgba(0,0,0,.3)",borderTopColor:C.bg,borderRadius:"50%",animation:"spn 1s linear infinite" }}/>Calculando...</>:"Calcular mi ROI"}
+            </button>
+          </div>
+
+          <div>
+            {!result && !loading && (
+              <div style={{ background:C.bgS, border:`1px dashed ${C.brd}`, borderRadius:16, padding:40, textAlign:"center", opacity:.45 }}>
+                <div style={{ fontSize:42, marginBottom:12 }}>$</div>
+                <p style={{ color:C.mid, fontSize:14 }}>El cálculo aparecerá aquí</p>
+              </div>
+            )}
+            {loading && (
+              <div style={{ background:C.bgS, border:`1px solid ${C.brd}`, borderRadius:16, padding:40, textAlign:"center" }}>
+                <div style={{ width:40,height:40,border:`3px solid ${C.acT}`,borderTopColor:C.ac,borderRadius:"50%",animation:"spn 1s linear infinite",margin:"0 auto 16px" }}/>
+                <p style={{ color:C.mid }}>Calculando el costo real...</p>
+              </div>
+            )}
+            {result && (
+              <div style={{ animation:"fup .5s ease both" }}>
+                <div style={{ background:C.bgS, border:`1.5px solid ${C.brd}`, borderRadius:16, padding:26, marginBottom:14 }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
+                    {[
+                      { lbl:"Costo actual/año", val:`$${result.costYear.toLocaleString("es-CL")} CLP`, color:"#F87171" },
+                      { lbl:"Ahorro potencial/año", val:`$${Math.round(result.costYear*(result.ahorro_pct/100)).toLocaleString("es-CL")} CLP`, color:"#22C55E" },
+                      { lbl:"Recuperación inversión", val:`${result.roi_meses} meses`, color:C.ac },
+                      { lbl:"Reducción de tiempo", val:`${result.ahorro_pct}%`, color:C.ac },
+                    ].map((item,i) => (
+                      <div key={i} style={{ background:C.bgC, border:`1px solid ${C.brd}`, borderRadius:10, padding:14, textAlign:"center" }}>
+                        <div style={{ fontSize:10.5, color:C.mid, letterSpacing:".06em", textTransform:"uppercase", marginBottom:4 }}>{item.lbl}</div>
+                        <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:18, color:item.color }}>{item.val}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ background:`rgba(0,180,255,.06)`, border:`1px solid rgba(0,180,255,.2)`, borderRadius:10, padding:14, marginBottom:12 }}>
+                    <p style={{ fontSize:13.5, color:C.txt, lineHeight:1.7 }}>{result.mensaje_urgencia}</p>
+                  </div>
+                  <div style={{ marginBottom:4 }}>
+                    <div style={{ fontSize:11, color:C.mid, letterSpacing:".08em", textTransform:"uppercase", marginBottom:8 }}>Solución: <strong style={{ color:C.txt }}>{result.solucion}</strong> · {result.plazo} semanas</div>
+                    {result.beneficios?.map((b,i) => <div key={i} style={{ fontSize:12.5, color:C.mid, marginBottom:4, display:"flex", gap:8 }}><span style={{ color:C.ac }}>✓</span>{b}</div>)}
+                  </div>
+                </div>
+                <button onClick={() => document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})} style={{
+                  width:"100%", background:C.ac, color:C.bg, border:"none", padding:"16px",
+                  borderRadius:10, cursor:"pointer", fontFamily:"'Space Grotesk',sans-serif",
+                  fontWeight:700, fontSize:15, boxShadow:`0 0 28px ${C.acG}`,
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                }}>
+                  Quiero empezar a ahorrar <ArrowRight size={16}/>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── FAQ DINÁMICA IA ───────────────────────────────────────────────
+const FAQS_PRESET = [
+  "¿Cuánto cuesta un sitio web?",
+  "¿Cuánto tiempo toma un proyecto?",
+  "¿Trabajan con empresas pequeñas?",
+  "¿Puedo pagar en cuotas?",
+  "¿Qué necesito para empezar?",
+  "¿Hacen soporte después de entregar?",
+  "¿Pueden modernizar mi sistema antiguo?",
+  "¿Trabajan en toda Latinoamérica?",
+];
+
+function FAQDinamica() {
+  const [active, setActive] = useState(null);
+  const [answers, setAnswers] = useState({});
+  const [custom, setCustom] = useState("");
+  const [loadingKey, setLoadingKey] = useState(null);
+
+  const ask = async (question, key) => {
+    if (answers[key]) { setActive(key); return; }
+    setActive(key); setLoadingKey(key);
+    try {
+      const res = await fetch("/api/ai", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          system:`Eres el asistente de Tempvs7, empresa de desarrollo de software de Maximo Henriquez Olivares en Santiago, Chile. Responde preguntas sobre los servicios de manera directa, honesta y orientada a convertir al cliente. Máximo 4 líneas. Si preguntan precio, di que depende del proyecto pero los proyectos simples parten desde $300.000 CLP y los medianos desde $1.500.000 CLP. Siempre termina con una micro-CTA natural.`,
+          messages:[{ role:"user", content:question }],
+          max_tokens:200,
+        }),
+      });
+      const d = await res.json();
+      const text = d.content?.[0]?.text || "";
+      setAnswers(prev => ({...prev, [key]:text}));
+    } catch { setAnswers(prev => ({...prev, [key]:"Hubo un error. Escríbeme directo a maximo.henriquez@icloud.com"})); }
+    setLoadingKey(null);
+  };
+
+  return (
+    <section id="faq" style={{ padding:"96px 60px", background:C.bg, borderTop:`1px solid ${C.brd}` }}>
+      <div style={{ maxWidth:860, margin:"0 auto" }}>
+        <div style={{ marginBottom:48 }}>
+          <div style={{ fontSize:11, fontWeight:600, color:C.ac, letterSpacing:".14em", textTransform:"uppercase", marginBottom:12, fontFamily:"'Space Grotesk',sans-serif" }}>— Preguntas Frecuentes</div>
+          <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:"clamp(26px,3.5vw,44px)", fontWeight:700, color:C.txt, letterSpacing:"-.04em", lineHeight:1.1 }}>
+            Resolvemos tus dudas<br/><span style={{ color:C.ac }}>al instante.</span>
+          </h2>
+        </div>
+
+        <div style={{ display:"flex", flexWrap:"wrap", gap:10, marginBottom:28 }}>
+          {FAQS_PRESET.map((q,i) => (
+            <button key={i} onClick={() => ask(q, q)} style={{
+              padding:"9px 18px", borderRadius:20, border:`1.5px solid ${active===q?C.ac:C.brd}`,
+              background:active===q?C.acT:C.bgC, color:active===q?C.ac:C.mid,
+              cursor:"pointer", fontSize:13.5, fontFamily:"'Inter',sans-serif",
+              transition:"all .2s", fontWeight:active===q?500:400,
+            }}>{q}</button>
+          ))}
+        </div>
+
+        {active && (
+          <div style={{ background:C.bgC, border:`1.5px solid ${C.ac}`, borderRadius:16, padding:26, marginBottom:24, animation:"fup .4s ease" }}>
+            <div style={{ fontSize:12, color:C.ac, fontWeight:600, marginBottom:10, letterSpacing:".06em", textTransform:"uppercase" }}>✦ {active}</div>
+            {loadingKey===active ? (
+              <div style={{ display:"flex", gap:5 }}>{[0,1,2].map(i => <div key={i} style={{ width:7,height:7,borderRadius:"50%",background:C.ac,animation:`blk 1s ease ${i*.2}s infinite` }}/>)}</div>
+            ) : (
+              <p style={{ fontSize:14.5, color:C.txt, lineHeight:1.75, whiteSpace:"pre-wrap" }}>{answers[active]}</p>
+            )}
+          </div>
+        )}
+
+        <div style={{ background:C.bgS, border:`1px solid ${C.brd}`, borderRadius:14, padding:22, marginBottom:24 }}>
+          <div style={{ fontSize:13, color:C.mid, marginBottom:12 }}>¿Tienes otra pregunta?</div>
+          <div style={{ display:"flex", gap:10 }}>
+            <input value={custom} onChange={e=>setCustom(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&custom.trim()&&ask(custom.trim(), custom.trim())}
+              placeholder="Escribe tu duda aquí..." style={{ flex:1, background:C.bgC, border:`1px solid ${C.brd}`, borderRadius:9, padding:"12px 14px", color:C.txt, fontSize:14, fontFamily:"'Inter',sans-serif" }}/>
+            <button onClick={() => custom.trim() && ask(custom.trim(), custom.trim())} style={{
+              background:C.ac, color:C.bg, border:"none", padding:"0 20px", borderRadius:9,
+              cursor:"pointer", fontFamily:"'Space Grotesk',sans-serif", fontWeight:600, fontSize:14,
+            }}>Preguntar</button>
+          </div>
+        </div>
+
+        <div style={{ textAlign:"center" }}>
+          <p style={{ color:C.mid, fontSize:14, marginBottom:14 }}>¿Prefieres hablar directamente?</p>
+          <button onClick={() => document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})} style={{
+            background:"transparent", color:C.ac, border:`1.5px solid ${C.ac}`,
+            padding:"13px 32px", borderRadius:10, cursor:"pointer",
+            fontFamily:"'Space Grotesk',sans-serif", fontWeight:600, fontSize:15,
+          }}>
+            Agenda una consulta gratuita →
+          </button>
         </div>
       </div>
     </section>
@@ -879,10 +1246,13 @@ export default function App() {
       <Navbar onAdmin={() => setAdmin(true)}/>
       <Hero/>
       <Services/>
+      <Diagnostico/>
+      <ROICalculator/>
       <Estimador/>
       <Sectors sectors={data.sectors}/>
       <Projects projects={data.projects}/>
       <About social={data.social}/>
+      <FAQDinamica/>
       <Contact/>
       <Footer social={data.social} onAdmin={() => setAdmin(true)}/>
       <ChatBot/>

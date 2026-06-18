@@ -26,12 +26,15 @@ export async function saveProject(p) {
   if (error) throw error;
 }
 
-export async function updateProject(p) {
-  const { error } = await supabase.from("projects").update({
-    title:p.title, description:p.desc, url:p.url||null,
-    img1:p.imgs[0], img2:p.imgs[1], img3:p.imgs[2], tags:p.tags,
-  }).eq("id", p.id);
+export async function uploadImage(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const filename = `proyecto_${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from("images")
+    .upload(filename, file, { cacheControl:"3600", upsert:true });
   if (error) throw error;
+  const { data } = supabase.storage.from("images").getPublicUrl(filename);
+  return data.publicUrl;
 }
 
 export async function deleteProject(id) {
@@ -64,5 +67,13 @@ export async function saveContact(form) {
 export async function updateSocial(social) {
   const { error } = await supabase
     .from("settings").upsert({ key:"social", value:social });
+  if (error) throw error;
+}
+
+export async function updateProject(p) {
+  const { error } = await supabase.from("projects").update({
+    title:p.title, description:p.desc, url:p.url||null,
+    img1:p.imgs[0], img2:p.imgs[1], img3:p.imgs[2], tags:p.tags,
+  }).eq("id", p.id);
   if (error) throw error;
 }

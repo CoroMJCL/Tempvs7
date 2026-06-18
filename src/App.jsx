@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import {
   getProjects, getSectors, getSocialLinks,
-  saveContact, saveProject, updateProject, deleteProject, updateSocial
+  saveContact, saveProject, updateProject, deleteProject, updateSocial, uploadImage
 } from "./supabase.js";
 
 // ═══════════════════════════════════════════════════════
@@ -594,6 +594,57 @@ function ChatBot() {
   );
 }
 
+// ── IMAGE UPLOADER ────────────────────────────────────────────────
+function ImageUploader({ value, onChange, label }) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadImage(file);
+      onChange(url);
+    } catch(e) {
+      alert("Error al subir. Verifica que el bucket 'images' sea público en Supabase → Storage.");
+    }
+    setUploading(false);
+  };
+
+  return (
+    <div style={{ marginBottom:12 }}>
+      <label style={{ fontSize:11, fontWeight:500, color:C.mid, display:"block", marginBottom:6 }}>{label}</label>
+      {value && (
+        <div style={{ position:"relative", marginBottom:8 }}>
+          <img src={value} alt="" style={{ width:"100%", height:120, objectFit:"cover", borderRadius:9, display:"block", border:`1px solid ${C.brd}` }} />
+          <button onClick={() => onChange("")} style={{ position:"absolute", top:6, right:6, background:"rgba(0,0,0,.7)", border:"none", borderRadius:"50%", width:24, height:24, cursor:"pointer", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <X size={12}/>
+          </button>
+        </div>
+      )}
+      <div style={{ display:"flex", gap:8 }}>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }}
+          onChange={e => handleFile(e.target.files[0])} />
+        <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{
+          background:uploading ? C.bgH : C.acT, border:`1px solid ${C.brd}`, borderRadius:8,
+          padding:"9px 14px", cursor:uploading ? "not-allowed" : "pointer",
+          color:uploading ? C.mid : C.ac, fontSize:12, fontWeight:600,
+          fontFamily:"'Space Grotesk',sans-serif", display:"flex", alignItems:"center",
+          gap:6, flexShrink:0, whiteSpace:"nowrap", transition:"all .2s",
+        }}>
+          {uploading
+            ? <><div style={{ width:12,height:12,border:"2px solid rgba(0,180,255,.3)",borderTopColor:C.ac,borderRadius:"50%",animation:"spn 1s linear infinite" }}/>Subiendo...</>
+            : "↑ Subir foto"}
+        </button>
+        <input value={value} onChange={e => onChange(e.target.value)}
+          placeholder="O pega una URL..."
+          style={{ flex:1, background:C.bgS, border:`1px solid ${C.brd}`, borderRadius:8,
+            padding:"9px 12px", color:C.txt, fontSize:12, fontFamily:"'Inter',sans-serif" }} />
+      </div>
+    </div>
+  );
+}
+
 // ── ADMIN ────────────────────────────────────────────────────────
 function Admin({ data, onSave, onClose }) {
   const [auth, setAuth] = useState(false);
@@ -651,9 +702,12 @@ function Admin({ data, onSave, onClose }) {
               <textarea value={np.desc} onChange={e=>setNp({...np,desc:e.target.value})} placeholder="Descripción" rows={2} style={{...is,resize:"vertical"}}/>
               <input value={np.url} onChange={e=>setNp({...np,url:e.target.value})} placeholder="URL del proyecto (dejar vacío para no mostrar)" style={is}/>
               <input value={np.tags} onChange={e=>setNp({...np,tags:e.target.value})} placeholder="Tags: React, AWS, Node.js" style={is}/>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:12 }}>
-                {[0,1,2].map(i => <input key={i} value={np.imgs[i]} onChange={e=>{ const imgs=[...np.imgs]; imgs[i]=e.target.value; setNp({...np,imgs}); }} placeholder={`URL imagen ${i+1}`} style={{...is,marginBottom:0}}/>)}
-              </div>
+              <ImageUploader label="Imagen principal *" value={np.imgs[0]}
+                onChange={v=>setNp({...np,imgs:[v,np.imgs[1],np.imgs[2]]})} />
+              <ImageUploader label="Imagen 2 (opcional)" value={np.imgs[1]}
+                onChange={v=>setNp({...np,imgs:[np.imgs[0],v,np.imgs[2]]})} />
+              <ImageUploader label="Imagen 3 (opcional)" value={np.imgs[2]}
+                onChange={v=>setNp({...np,imgs:[np.imgs[0],np.imgs[1],v]})} />
               <div style={{ display:"flex", gap:8, marginBottom:24 }}>
                 <button onClick={async () => {
                   if(!np.title) return;

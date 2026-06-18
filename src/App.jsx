@@ -175,7 +175,7 @@ function Mark({ size = 36, text = false }) {
 function Navbar({ onAdmin }) {
   const [sc, setSc] = useState(false);
   useEffect(() => { const f = () => setSc(window.scrollY > 40); window.addEventListener("scroll", f); return () => window.removeEventListener("scroll", f); }, []);
-  const lnk = [{ l:"Servicios",h:"#servicios" },{ l:"Proyectos",h:"#proyectos" },{ l:"Sobre mí",h:"#about" },{ l:"Contacto",h:"#contacto" }];
+  const lnk = [{ l:"Servicios",h:"#servicios" },{ l:"Análisis IA",h:"#estimador" },{ l:"Proyectos",h:"#proyectos" },{ l:"Sobre mí",h:"#about" },{ l:"Contacto",h:"#contacto" }];
   return (
     <nav style={{ position:"fixed", top:0, left:0, right:0, zIndex:100, padding:"0 48px", height:62, display:"flex", alignItems:"center", justifyContent:"space-between", background:sc ? "rgba(4,9,15,.92)" : "transparent", backdropFilter:sc ? "blur(20px)" : "none", borderBottom:sc ? `1px solid ${C.brd}` : "none", transition:"all .35s" }}>
       <Mark text />
@@ -297,6 +297,154 @@ function Services() {
         </div>
         <div className="bento" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14 }}>
           {SVCS.map((s,i) => <BentoCard key={i} svc={s} />)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── ESTIMADOR IA ─────────────────────────────────────────────────
+function Estimador() {
+  const [desc, setDesc] = useState("");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const COLORS = { Baja:"#22C55E", Media:"#F59E0B", Alta:"#EF4444" };
+
+  const analyze = async () => {
+    if (desc.trim().length < 30) { setError("Describe tu proyecto con más detalle para un análisis preciso."); return; }
+    setLoading(true); setResult(null); setError("");
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-6", max_tokens:1000,
+          system:`Eres el analizador de proyectos de Tempvs7, empresa de desarrollo de software de Maximo Henriquez Olivares en Santiago, Chile.
+Analiza el proyecto del cliente y muéstrale el alcance técnico real. El objetivo es que comprenda la complejidad, vea que necesita un experto y quiera contactar a Maximo.
+Responde SOLO en JSON válido, sin texto extra, con esta estructura:
+{"tipo":"tipo en 4-6 palabras","complejidad":"Baja|Media|Alta","estimacion":"X a Y semanas","stack":["tech1","tech2","tech3","tech4"],"fases":[{"nombre":"nombre","semanas":"X sem.","desc":"qué incluye brevemente"}],"recomendacion":"2-3 oraciones que explican por qué este proyecto requiere experiencia técnica especializada, qué errores típicos ocurren sin ella y cómo Tempvs7 puede ejecutarlo correctamente y sin retrabajo."}`,
+          messages:[{role:"user", content:desc}],
+        }),
+      });
+      const d = await res.json();
+      const text = d.content?.[0]?.text || "";
+      const clean = text.replace(/```json|```/g,"").trim();
+      setResult(JSON.parse(clean));
+    } catch { setError("No se pudo analizar. Intenta de nuevo."); }
+    setLoading(false);
+  };
+
+  return (
+    <section id="estimador" style={{ padding:"96px 60px", background:C.bgC, borderTop:`1px solid ${C.brd}` }}>
+      <div style={{ maxWidth:1100, margin:"0 auto" }}>
+        <div style={{ marginBottom:52 }}>
+          <div style={{ fontSize:11, fontWeight:600, color:C.ac, letterSpacing:".14em", textTransform:"uppercase", marginBottom:12, fontFamily:"'Space Grotesk',sans-serif" }}>— Análisis IA</div>
+          <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:"clamp(28px,3.5vw,46px)", fontWeight:700, color:C.txt, letterSpacing:"-.04em", lineHeight:1.1, marginBottom:16 }}>
+            Describe tu proyecto.<br/><span style={{ color:C.ac }}>Te mostramos el alcance real.</span>
+          </h2>
+          <p style={{ fontSize:15, color:C.mid, maxWidth:560, lineHeight:1.72 }}>
+            Muchos proyectos fracasan por una mala estimación inicial. Analiza el tuyo y descubre qué se necesita realmente para construirlo bien, a la primera.
+          </p>
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:result?"1fr 1fr":"1fr 1fr", gap:40, alignItems:"start" }}>
+          {/* Input */}
+          <div>
+            <label style={{ fontSize:13, fontWeight:500, color:C.mid, display:"block", marginBottom:10 }}>Describe qué quieres construir</label>
+            <textarea value={desc} onChange={e=>{setDesc(e.target.value);setError("");}} placeholder={"Ej: Necesito una plataforma donde mis clientes puedan reservar horas, pagar online y yo pueda ver el calendario con todas las citas. También quiero enviarles recordatorios automáticos..."}
+              rows={9} style={{ width:"100%", background:C.bgS, border:`1.5px solid ${C.brd}`, borderRadius:14, padding:"18px 20px", color:C.txt, fontSize:14, fontFamily:"'Inter',sans-serif", resize:"vertical", lineHeight:1.75, boxSizing:"border-box" }}/>
+            {error && <p style={{ color:"#F87171", fontSize:12.5, marginTop:8 }}>{error}</p>}
+            <button onClick={analyze} disabled={loading||desc.trim().length<30} style={{
+              marginTop:14, background:loading||desc.trim().length<30 ? C.bgH : C.ac,
+              color:loading||desc.trim().length<30 ? C.lgt : C.bg,
+              border:"none", padding:"15px 32px", borderRadius:10,
+              fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:15,
+              cursor:loading||desc.trim().length<30 ? "not-allowed" : "pointer",
+              display:"flex", alignItems:"center", gap:10, transition:"all .3s",
+              boxShadow:loading||desc.trim().length<30 ? "none" : `0 0 24px ${C.acG}`,
+            }}>
+              {loading
+                ? <><div style={{ width:18,height:18,border:"2px solid rgba(0,0,0,.3)",borderTopColor:C.bg,borderRadius:"50%",animation:"spn 1s linear infinite" }}/>Analizando tu proyecto...</>
+                : <>✦ Analizar mi proyecto</>}
+            </button>
+            <p style={{ fontSize:12, color:C.lgt, marginTop:10 }}>Análisis gratuito · Sin registro · Sin compromiso</p>
+          </div>
+
+          {/* Resultado */}
+          <div>
+            {!result && !loading && (
+              <div style={{ background:C.bgS, border:`1px dashed ${C.brd}`, borderRadius:14, padding:32, textAlign:"center", opacity:.5 }}>
+                <div style={{ fontSize:36, marginBottom:12 }}>✦</div>
+                <p style={{ color:C.mid, fontSize:14 }}>El análisis aparecerá aquí</p>
+              </div>
+            )}
+            {loading && (
+              <div style={{ background:C.bgS, border:`1px solid ${C.brd}`, borderRadius:14, padding:32, textAlign:"center" }}>
+                <div style={{ width:40,height:40,border:`3px solid ${C.acT}`,borderTopColor:C.ac,borderRadius:"50%",animation:"spn 1s linear infinite",margin:"0 auto 16px" }}/>
+                <p style={{ color:C.mid, fontSize:14 }}>Analizando complejidad técnica...</p>
+              </div>
+            )}
+            {result && (
+              <div style={{ animation:"fup .5s ease both" }}>
+                {/* Tipo + Complejidad */}
+                <div style={{ background:C.bgS, border:`1.5px solid ${C.brd}`, borderRadius:14, padding:22, marginBottom:12 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14, flexWrap:"wrap", gap:10 }}>
+                    <div>
+                      <div style={{ fontSize:10.5, color:C.mid, letterSpacing:".1em", textTransform:"uppercase", marginBottom:4 }}>Tipo de proyecto</div>
+                      <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:17, color:C.txt }}>{result.tipo}</div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontSize:10.5, color:C.mid, letterSpacing:".1em", textTransform:"uppercase", marginBottom:4 }}>Complejidad</div>
+                      <span style={{ background:`${COLORS[result.complejidad]}18`, color:COLORS[result.complejidad], border:`1px solid ${COLORS[result.complejidad]}40`, borderRadius:20, padding:"4px 14px", fontSize:13, fontWeight:600 }}>{result.complejidad}</span>
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, paddingTop:12, borderTop:`1px solid ${C.brd}` }}>
+                    <span style={{ fontSize:10.5, color:C.mid, letterSpacing:".08em", textTransform:"uppercase" }}>Estimación:</span>
+                    <span style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:16, color:C.ac }}>{result.estimacion}</span>
+                  </div>
+                </div>
+
+                {/* Stack */}
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:10.5, color:C.mid, letterSpacing:".1em", textTransform:"uppercase", marginBottom:8 }}>Stack recomendado</div>
+                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                    {result.stack.map(t => <span key={t} style={{ fontSize:12, fontWeight:500, padding:"4px 12px", borderRadius:6, background:C.acT, color:C.ac, border:`1px solid ${C.brd}` }}>{t}</span>)}
+                  </div>
+                </div>
+
+                {/* Fases */}
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:10.5, color:C.mid, letterSpacing:".1em", textTransform:"uppercase", marginBottom:10 }}>Fases del proyecto</div>
+                  {result.fases?.map((f,i) => (
+                    <div key={i} style={{ display:"flex", gap:12, marginBottom:10, alignItems:"flex-start" }}>
+                      <div style={{ width:26,height:26,borderRadius:"50%",background:C.acT,border:`1px solid ${C.ac}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,fontWeight:700,color:C.ac }}>{i+1}</div>
+                      <div>
+                        <div style={{ fontFamily:"'Space Grotesk',sans-serif",fontSize:13,fontWeight:600,color:C.txt,marginBottom:2 }}>{f.nombre} <span style={{ color:C.ac,fontWeight:400 }}>· {f.semanas}</span></div>
+                        <div style={{ fontSize:12,color:C.mid,lineHeight:1.5 }}>{f.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Recomendación */}
+                <div style={{ background:"rgba(0,180,255,0.06)",border:`1.5px solid rgba(0,180,255,0.22)`,borderRadius:12,padding:18,marginBottom:16 }}>
+                  <div style={{ fontSize:10.5,color:C.ac,letterSpacing:".1em",textTransform:"uppercase",marginBottom:8,fontWeight:600 }}>✦ Análisis técnico</div>
+                  <p style={{ fontSize:13.5,color:C.txt,lineHeight:1.75 }}>{result.recomendacion}</p>
+                </div>
+
+                {/* CTA */}
+                <button onClick={()=>document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})} style={{
+                  width:"100%",background:C.ac,color:C.bg,border:"none",padding:"16px",borderRadius:10,
+                  cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:15,
+                  boxShadow:`0 0 28px ${C.acG}`,display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                  transition:"all .3s",
+                }} onMouseEnter={e=>e.currentTarget.style.background=C.acD} onMouseLeave={e=>e.currentTarget.style.background=C.ac}>
+                  Quiero cotizar este proyecto <ArrowRight size={16}/>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </section>
@@ -535,309 +683,181 @@ function Footer({ social, onAdmin }) {
   );
 }
 
-// ── CHATBOT ──────────────────────────────────────────────────────
+
+// ── CHATBOT IA DE VENTAS ────────────────────────────────────────
+const CHAT_SYSTEM = `Eres el asistente de ventas de Tempvs7, empresa de desarrollo de software de Maximo Henriquez Olivares en Santiago, Chile.
+
+Tu objetivo es entender qué necesita el cliente y calificarlo como prospecto. Sé cálido, profesional y conversacional.
+
+Servicios: Desarrollo Web (React/Next.js), Cloud AWS/Azure, Modernización de sistemas, Integraciones API, Apps PWA, Consultoría tecnológica. Clientes: Pymes y particulares.
+
+Flujo que debes seguir:
+1. Pregunta qué tipo de negocio tiene o qué problema quiere resolver
+2. Entiende el alcance y urgencia del proyecto
+3. Cuando tengas suficiente información e interés del cliente, incluye la señal [CAPTURAR] al FINAL de tu respuesta para mostrar el formulario de contacto
+
+Reglas:
+- Haz solo UNA pregunta por mensaje, no abrumes
+- Máximo 3 líneas por respuesta, sé directo
+- Si preguntan precio, menciona que los proyectos parten desde $300.000 CLP según complejidad
+- Cuando el cliente muestra interés claro, incluye [CAPTURAR] al final de tu mensaje
+- Responde en español (inglés si el cliente escribe en inglés)
+- Nunca inventes precios exactos, di que Maximo lo cotiza tras revisar el proyecto`;
+
 function ChatBot() {
   const [open, setOpen] = useState(false);
-  const [msgs, setMsgs] = useState([{ r:"a", c:"Hola 👋 Soy el asistente de Tempvs7. ¿En qué puedo ayudarte? Cuéntame sobre tu proyecto." }]);
-  const [inp, setInp] = useState(""); const [load, setLoad] = useState(false);
-  const end = useRef(null);
-  useEffect(() => { if(open) end.current?.scrollIntoView({behavior:"smooth"}); }, [msgs, open]);
+  const [msgs, setMsgs] = useState([{ r:"a", c:"¡Hola! 👋 Soy el asistente de Tempvs7.\n\n¿Tienes un proyecto en mente o estás buscando solucionar algo en tu negocio?" }]);
+  const [inp, setInp] = useState("");
+  const [load, setLoad] = useState(false);
+  const [capture, setCapture] = useState(false);
+  const [lead, setLead] = useState({ name:"", email:"" });
+  const [leadSaved, setLeadSaved] = useState(false);
+  const [unread, setUnread] = useState(true);
+  const endRef = useRef(null);
+
+  useEffect(() => { if(open){ endRef.current?.scrollIntoView({behavior:"smooth"}); setUnread(false); } }, [msgs, open]);
+
   const send = async () => {
     if (!inp.trim() || load) return;
-    const txt = inp.trim(); setInp(""); setMsgs(p => [...p, {r:"u",c:txt}]); setLoad(true);
+    const txt = inp.trim(); setInp("");
+    setMsgs(p => [...p, {r:"u", c:txt}]); setLoad(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", { method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:500,
-          system:`Eres el asistente virtual de Tempvs7, la marca de ingeniería de software de Maximo Henriquez Olivares, Tech Lead en Santiago, Chile. Servicios: Desarrollo Web, Cloud AWS/Azure, Modernización Legacy, APIs, PWA, Consultoría. Atendemos Pymes y particulares. Contacto: maximo.henriquez@icloud.com | +56 9 4004 2905. Responde en español (inglés si lo piden). Sé conciso, profesional y directo. Si hay interés concreto, invita a usar el formulario de contacto.`,
-          messages: msgs.concat({r:"u",c:txt}).map(m => ({role:m.r==="u"?"user":"assistant",content:m.c})),
-        })
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-6", max_tokens:350,
+          system: CHAT_SYSTEM,
+          messages: msgs.concat({r:"u",c:txt}).map(m => ({
+            role: m.r==="u" ? "user" : "assistant",
+            content: m.c.replace("[CAPTURAR]","").trim(),
+          })),
+        }),
       });
       const d = await res.json();
-      setMsgs(p => [...p, {r:"a",c:d.content?.[0]?.text||"Hubo un error. Escríbeme a maximo.henriquez@icloud.com"}]);
-    } catch { setMsgs(p => [...p, {r:"a",c:"Error de conexión. Escríbeme a maximo.henriquez@icloud.com"}]); }
+      let reply = d.content?.[0]?.text || "Hubo un error. Escríbeme a maximo.henriquez@icloud.com";
+      if (reply.includes("[CAPTURAR]")) {
+        reply = reply.replace("[CAPTURAR]","").trim();
+        const summary = msgs.filter(m=>m.r==="u").map(m=>m.c).join(" | ") + " | " + txt;
+        setLead(l => ({...l, summary}));
+        setTimeout(() => setCapture(true), 600);
+      }
+      setMsgs(p => [...p, {r:"a", c:reply}]);
+    } catch {
+      setMsgs(p => [...p, {r:"a", c:"Error de conexión. Contáctame en maximo.henriquez@icloud.com o al +56 9 4004 2905."}]);
+    }
     setLoad(false);
   };
+
+  const submitLead = async () => {
+    if (!lead.email) return;
+    try {
+      await saveContact({
+        name: lead.name || "Prospecto chatbot",
+        email: lead.email,
+        phone: "",
+        service: "Consulta via chatbot",
+        msg: lead.summary || "Contacto desde chatbot",
+      });
+    } catch(e) { console.error(e); }
+    setLeadSaved(true); setCapture(false);
+    setMsgs(p => [...p, {r:"a", c:`¡Perfecto${lead.name ? ", "+lead.name : ""}! 🎉 Maximo revisará tu consulta y te contactará dentro de 24 horas. ¡Gracias por tu interés!`}]);
+  };
+
   return (
     <>
       {open && (
-        <div style={{ position:"fixed", bottom:80, right:20, width:340, zIndex:200, borderRadius:16, overflow:"hidden", boxShadow:`0 24px 64px rgba(0,0,0,.5), 0 0 0 1px ${C.brd}`, background:C.bgC, animation:"sli .3s ease" }}>
-          <div style={{ padding:"14px 16px", background:C.bgS, borderBottom:`1px solid ${C.brd}`, display:"flex", alignItems:"center", gap:10 }}>
-            <div style={{ width:34, height:34, borderRadius:9, background:C.acT, border:`1px solid ${C.ac}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <span style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:12, color:C.ac }}>T7</span>
+        <div style={{ position:"fixed", bottom:80, right:20, width:350, zIndex:200, borderRadius:18, overflow:"hidden", boxShadow:`0 24px 64px rgba(0,0,0,.55), 0 0 0 1px ${C.brd}`, background:C.bgC, animation:"sli .3s ease" }}>
+          {/* Header */}
+          <div style={{ padding:"14px 18px", background:`linear-gradient(135deg, ${C.bgS}, ${C.bgH})`, borderBottom:`1px solid ${C.brd}`, display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:38, height:38, borderRadius:10, background:C.acT, border:`1px solid ${C.ac}`, display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
+              <span style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:13, color:C.ac }}>T7</span>
+              <div style={{ position:"absolute", bottom:-2, right:-2, width:10, height:10, borderRadius:"50%", background:"#22C55E", border:`2px solid ${C.bgC}` }}/>
             </div>
-            <div>
-              <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:600, fontSize:13, color:C.txt }}>Asistente Tempvs7</div>
-              <div style={{ fontSize:10.5, color:C.mid, display:"flex", alignItems:"center", gap:4 }}><span style={{ width:5,height:5,borderRadius:"50%",background:"#22D3EE",display:"inline-block" }}/> En línea</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:600, fontSize:13.5, color:C.txt }}>Asistente Tempvs7</div>
+              <div style={{ fontSize:11, color:"#22C55E" }}>● En línea · Responde en segundos</div>
             </div>
-            <button onClick={() => setOpen(false)} style={{ marginLeft:"auto", background:"none", border:"none", cursor:"pointer", color:C.mid }}><X size={16}/></button>
+            <button onClick={()=>setOpen(false)} style={{ background:"none", border:"none", cursor:"pointer", color:C.mid, padding:4 }}><X size={16}/></button>
           </div>
-          <div style={{ height:290, overflowY:"auto", padding:14, display:"flex", flexDirection:"column", gap:10 }}>
+
+          {/* Mensajes */}
+          <div style={{ height:320, overflowY:"auto", padding:14, display:"flex", flexDirection:"column", gap:10 }}>
             {msgs.map((m,i) => (
-              <div key={i} style={{ display:"flex", justifyContent:m.r==="u"?"flex-end":"flex-start" }}>
-                <div style={{ maxWidth:"82%", padding:"9px 13px", borderRadius:m.r==="u"?"12px 3px 12px 12px":"3px 12px 12px 12px", background:m.r==="u"?C.ac:C.bgS, color:m.r==="u"?C.bg:C.txt, fontSize:13, lineHeight:1.55, border:m.r==="u"?"none":`1px solid ${C.brd}` }}>{m.c}</div>
+              <div key={i} style={{ display:"flex", flexDirection:"column", alignItems:m.r==="u"?"flex-end":"flex-start", gap:2 }}>
+                {m.r==="a" && <div style={{ fontSize:10, color:C.lgt, marginLeft:4, marginBottom:2 }}>Tempvs7</div>}
+                <div style={{
+                  maxWidth:"85%", padding:"10px 14px",
+                  borderRadius: m.r==="u" ? "14px 4px 14px 14px" : "4px 14px 14px 14px",
+                  background: m.r==="u" ? C.ac : C.bgS,
+                  color: m.r==="u" ? C.bg : C.txt,
+                  fontSize:13.5, lineHeight:1.6,
+                  border: m.r==="u" ? "none" : `1px solid ${C.brd}`,
+                  whiteSpace:"pre-wrap",
+                }}>{m.c}</div>
               </div>
             ))}
-            {load && <div style={{ display:"flex", gap:4, padding:"6px 10px" }}>{[0,1,2].map(i => <div key={i} style={{ width:6,height:6,borderRadius:"50%",background:C.ac,animation:`blk 1s ease ${i*.18}s infinite` }}/>)}</div>}
-            <div ref={end}/>
+
+            {/* Formulario de captura de lead */}
+            {capture && !leadSaved && (
+              <div style={{ background:C.bgS, border:`1.5px solid ${C.ac}`, borderRadius:14, padding:16, animation:"sli .4s ease" }}>
+                <div style={{ fontSize:12, color:C.ac, fontWeight:600, marginBottom:12, display:"flex", alignItems:"center", gap:6 }}>
+                  ✦ Déjame tus datos y Maximo te contacta
+                </div>
+                <input value={lead.name} onChange={e=>setLead({...lead,name:e.target.value})} placeholder="Tu nombre" style={{ width:"100%", background:C.bgC, border:`1px solid ${C.brd}`, borderRadius:8, padding:"9px 12px", color:C.txt, fontSize:13, fontFamily:"'Inter',sans-serif", marginBottom:8, boxSizing:"border-box" }}/>
+                <input type="email" value={lead.email} onChange={e=>setLead({...lead,email:e.target.value})} placeholder="Tu email *" style={{ width:"100%", background:C.bgC, border:`1px solid ${C.brd}`, borderRadius:8, padding:"9px 12px", color:C.txt, fontSize:13, fontFamily:"'Inter',sans-serif", marginBottom:12, boxSizing:"border-box" }}/>
+                <button onClick={submitLead} disabled={!lead.email} style={{
+                  width:"100%", background:lead.email ? C.ac : C.bgH, color:lead.email ? C.bg : C.mid,
+                  border:"none", padding:"11px", borderRadius:8, cursor:lead.email?"pointer":"not-allowed",
+                  fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:13.5,
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                }}>
+                  <Send size={14}/> Quiero que me contacten
+                </button>
+              </div>
+            )}
+
+            {load && (
+              <div style={{ display:"flex", gap:5, padding:"8px 12px", alignSelf:"flex-start" }}>
+                {[0,1,2].map(i => <div key={i} style={{ width:7,height:7,borderRadius:"50%",background:C.ac,animation:`blk 1s ease ${i*.2}s infinite` }}/>)}
+              </div>
+            )}
+            <div ref={endRef}/>
           </div>
-          <div style={{ padding:"10px 12px", borderTop:`1px solid ${C.brd}`, display:"flex", gap:8, background:C.bgS }}>
-            <input value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Escribe tu consulta..." style={{ flex:1, background:C.bgC, border:`1px solid ${C.brd}`, borderRadius:8, padding:"9px 12px", color:C.txt, fontSize:13, fontFamily:"'Inter',sans-serif" }}/>
-            <button onClick={send} disabled={load||!inp.trim()} style={{ width:36,height:36,borderRadius:8,border:"none",background:inp.trim()&&!load?C.ac:C.bgH,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s" }}>
+
+          {/* Input */}
+          <div style={{ padding:"10px 14px", borderTop:`1px solid ${C.brd}`, display:"flex", gap:8, background:C.bgS }}>
+            <input value={inp} onChange={e=>setInp(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&send()}
+              placeholder="Escribe tu consulta..."
+              style={{ flex:1, background:C.bgC, border:`1px solid ${C.brd}`, borderRadius:9, padding:"10px 13px", color:C.txt, fontSize:13, fontFamily:"'Inter',sans-serif" }}/>
+            <button onClick={send} disabled={load||!inp.trim()} style={{ width:38,height:38,borderRadius:9,border:"none",background:inp.trim()&&!load?C.ac:C.bgH,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s" }}>
               <Send size={14} color={inp.trim()&&!load?C.bg:C.lgt}/>
             </button>
           </div>
         </div>
       )}
-      <button onClick={() => setOpen(p=>!p)} style={{ position:"fixed",bottom:20,right:20,zIndex:200,width:50,height:50,borderRadius:12,border:`1px solid ${C.brd}`,background:open?C.bgS:C.ac,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:open?"none":`0 0 24px ${C.acG}`,transition:"all .25s" }}
-        onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.08)";}} onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";}}>
-        {open?<X size={18} color={C.ac}/>:<MessageCircle size={18} color={C.bg}/>}
+
+      {/* Botón flotante */}
+      <button onClick={()=>setOpen(p=>!p)} style={{
+        position:"fixed", bottom:20, right:20, zIndex:200,
+        width:54, height:54, borderRadius:14, border:"none",
+        background:open?C.bgS:C.ac, cursor:"pointer",
+        display:"flex", alignItems:"center", justifyContent:"center",
+        boxShadow:open?"none":`0 0 28px ${C.acG}, 0 8px 20px rgba(0,0,0,.3)`,
+        transition:"all .25s",
+      }}
+        onMouseEnter={e=>{ if(!open) e.currentTarget.style.transform="scale(1.08)"; }}
+        onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>
+        {open ? <X size={20} color={C.ac}/> : <MessageCircle size={22} color={C.bg}/>}
+        {!open && unread && (
+          <div style={{ position:"absolute", top:-4, right:-4, width:14, height:14, borderRadius:"50%", background:"#EF4444", border:`2px solid ${C.bg}`, animation:"pulse 2s ease infinite" }}/>
+        )}
       </button>
     </>
   );
 }
 
-// ── IMAGE UPLOADER ────────────────────────────────────────────────
-function ImageUploader({ value, onChange, label }) {
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef(null);
 
-  const handleFile = async (file) => {
-    if (!file) return;
-    setUploading(true);
-    try {
-      const url = await uploadImage(file);
-      onChange(url);
-    } catch(e) {
-      alert("Error al subir. Verifica que el bucket 'images' sea público en Supabase → Storage.");
-    }
-    setUploading(false);
-  };
-
-  return (
-    <div style={{ marginBottom:12 }}>
-      <label style={{ fontSize:11, fontWeight:500, color:C.mid, display:"block", marginBottom:6 }}>{label}</label>
-      {value && (
-        <div style={{ position:"relative", marginBottom:8 }}>
-          <img src={value} alt="" style={{ width:"100%", height:120, objectFit:"cover", borderRadius:9, display:"block", border:`1px solid ${C.brd}` }} />
-          <button onClick={() => onChange("")} style={{ position:"absolute", top:6, right:6, background:"rgba(0,0,0,.7)", border:"none", borderRadius:"50%", width:24, height:24, cursor:"pointer", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <X size={12}/>
-          </button>
-        </div>
-      )}
-      <div style={{ display:"flex", gap:8 }}>
-        <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }}
-          onChange={e => handleFile(e.target.files[0])} />
-        <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{
-          background:uploading ? C.bgH : C.acT, border:`1px solid ${C.brd}`, borderRadius:8,
-          padding:"9px 14px", cursor:uploading ? "not-allowed" : "pointer",
-          color:uploading ? C.mid : C.ac, fontSize:12, fontWeight:600,
-          fontFamily:"'Space Grotesk',sans-serif", display:"flex", alignItems:"center",
-          gap:6, flexShrink:0, whiteSpace:"nowrap", transition:"all .2s",
-        }}>
-          {uploading
-            ? <><div style={{ width:12,height:12,border:"2px solid rgba(0,180,255,.3)",borderTopColor:C.ac,borderRadius:"50%",animation:"spn 1s linear infinite" }}/>Subiendo...</>
-            : "↑ Subir foto"}
-        </button>
-        <input value={value} onChange={e => onChange(e.target.value)}
-          placeholder="O pega una URL..."
-          style={{ flex:1, background:C.bgS, border:`1px solid ${C.brd}`, borderRadius:8,
-            padding:"9px 12px", color:C.txt, fontSize:12, fontFamily:"'Inter',sans-serif" }} />
-      </div>
-    </div>
-  );
-}
-
-// ── ADMIN ────────────────────────────────────────────────────────
-function Admin({ data, onSave, onClose }) {
-  const [auth, setAuth] = useState(false);
-  const [email, setEmail] = useState("");
-  const [pwd, setPwd] = useState("");
-  const [loginLoading, setLoginLoading] = useState(false);
-  const [loginError, setLoginError] = useState("");
-
-  const handleLogin = async () => {
-    if (!email || !pwd) return;
-    setLoginLoading(true); setLoginError("");
-    try {
-      await adminLogin(email, pwd);
-      setAuth(true);
-    } catch(e) {
-      setLoginError("Email o contraseña incorrectos");
-    }
-    setLoginLoading(false);
-  };
-
-  const handleClose = async () => {
-    await adminLogout();
-    onClose();
-  };
-  const [tab, setTab] = useState("projects");
-  const [projects, setProjects] = useState(data.projects);
-  const [sectors, setSectors] = useState(data.sectors);
-  const [social, setSocial] = useState({...data.social});
-  const [np, setNp] = useState({ title:"", desc:"", url:"", imgs:["","",""], tags:"" });
-  const [editingId, setEditingId] = useState(null);
-
-  const startEdit = (p) => {
-    setEditingId(p.id);
-    setNp({ title:p.title, desc:p.desc, url:p.url==="*"?"":p.url||"", imgs:[...p.imgs], tags:p.tags.join(", ") });
-  };
-  const cancelEdit = () => { setEditingId(null); setNp({ title:"", desc:"", url:"", imgs:["","",""], tags:"" }); };
-  const [ns, setNs] = useState("");
-  // Admin usa tema claro para mejor legibilidad
-  const A = {
-    bg:"#FFFFFF", surface:"#F4F6F9", border:"#DDE1E8",
-    text:"#1A1D23", mid:"#6B7280", ac:C.ac,
-  };
-  const is = { background:A.surface, border:`1px solid ${A.border}`, borderRadius:8, padding:"10px 14px", color:A.text, fontSize:13, width:"100%", fontFamily:"'Inter',sans-serif", marginBottom:10, boxSizing:"border-box" };
-  const tb = t => ({ padding:"10px 16px", border:"none", borderBottom:tab===t?`2px solid ${A.ac}`:"2px solid transparent", background:A.bg, cursor:"pointer", fontSize:13, fontWeight:500, color:tab===t?A.ac:A.mid, fontFamily:"'Space Grotesk',sans-serif", transition:"color .2s" });
-  if (!auth) return (
-    <div style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(2,5,10,.9)", backdropFilter:"blur(8px)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div style={{ background:C.bgC, border:`1px solid ${C.brd}`, borderRadius:20, padding:44, textAlign:"center", maxWidth:380, width:"100%", margin:24, boxShadow:`0 0 60px ${C.acT}` }}>
-        <Mark size={52}/><div style={{ height:20 }}/>
-        <h3 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:20, fontWeight:700, color:C.txt, marginBottom:6 }}>Panel Admin</h3>
-        <p style={{ fontSize:13, color:C.mid, marginBottom:28 }}>Acceso con tu cuenta Supabase</p>
-        <div style={{ textAlign:"left", marginBottom:12 }}>
-          <label style={{ fontSize:11, fontWeight:500, color:C.mid, display:"block", marginBottom:5 }}>EMAIL</label>
-          <input type="email" value={email} onChange={e=>setEmail(e.target.value)}
-            onKeyDown={e=>e.key==="Enter"&&handleLogin()}
-            placeholder="admin@tudominio.com"
-            style={{ ...is, marginBottom:0 }}/>
-        </div>
-        <div style={{ textAlign:"left", marginBottom:20 }}>
-          <label style={{ fontSize:11, fontWeight:500, color:C.mid, display:"block", marginBottom:5 }}>CONTRASEÑA</label>
-          <input type="password" value={pwd} onChange={e=>setPwd(e.target.value)}
-            onKeyDown={e=>e.key==="Enter"&&handleLogin()}
-            placeholder="••••••••"
-            style={{ ...is, marginBottom:0 }}/>
-        </div>
-        {loginError && <p style={{ color:"#F87171", fontSize:12, marginBottom:14 }}>{loginError}</p>}
-        <button onClick={handleLogin} disabled={loginLoading} style={{
-          background:C.ac, color:C.bg, border:"none", padding:"13px", borderRadius:9,
-          cursor:loginLoading?"not-allowed":"pointer", fontFamily:"'Space Grotesk',sans-serif",
-          fontWeight:600, fontSize:14, width:"100%", marginBottom:12,
-          opacity:loginLoading?.7:1, display:"flex", alignItems:"center", justifyContent:"center", gap:8
-        }}>
-          {loginLoading
-            ? <><div style={{ width:16,height:16,border:"2px solid rgba(0,0,0,.3)",borderTopColor:C.bg,borderRadius:"50%",animation:"spn 1s linear infinite" }}/>Verificando...</>
-            : "Ingresar"}
-        </button>
-        <button onClick={onClose} style={{ background:"none",border:"none",cursor:"pointer",color:C.mid,fontSize:13 }}>Cancelar</button>
-      </div>
-    </div>
-  );
-  return (
-    <div style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(0,0,0,.55)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-      <div style={{ background:A.bg, borderRadius:20, width:"100%", maxWidth:680, maxHeight:"90vh", overflow:"hidden", display:"flex", flexDirection:"column", boxShadow:"0 24px 80px rgba(0,0,0,.3)" }}>
-        <div style={{ padding:"16px 24px", borderBottom:`1px solid ${A.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", background:A.bg }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}><Mark size={32} text/><span style={{ color:A.mid, fontSize:13 }}>/ Admin</span></div>
-          <div style={{ display:"flex", gap:10 }}>
-            <button onClick={async () => {
-              try { await updateSocial(social); } catch(e) { console.error(e); }
-              onSave({ projects, sectors, social });
-            }} style={{ background:A.ac,color:"#fff",border:"none",padding:"8px 18px",borderRadius:8,cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:13 }}>Guardar</button>
-            <button onClick={handleClose} style={{ background:A.surface,border:`1px solid ${A.border}`,borderRadius:8,width:34,height:34,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}><X size={15} color={A.mid}/></button>
-          </div>
-        </div>
-        <div style={{ display:"flex", borderBottom:`1px solid ${A.border}`, padding:"0 16px", background:A.bg }}>
-          {["projects","sectors","social"].map(t => <button key={t} style={tb(t)} onClick={() => setTab(t)}>{{ projects:"Proyectos", sectors:"Sectores", social:"Redes" }[t]}</button>)}
-        </div>
-        <div style={{ flex:1, overflowY:"auto", padding:24, background:A.bg }}>
-          {tab==="projects" && (
-            <div>
-              <p style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:14, fontWeight:600, color:C.txt, marginBottom:14 }}>
-                {editingId ? "Editar Proyecto" : "Nuevo Proyecto"}
-              </p>
-              <input value={np.title} onChange={e=>setNp({...np,title:e.target.value})} placeholder="Título *" style={is}/>
-              <textarea value={np.desc} onChange={e=>setNp({...np,desc:e.target.value})} placeholder="Descripción" rows={2} style={{...is,resize:"vertical"}}/>
-              <input value={np.url} onChange={e=>setNp({...np,url:e.target.value})} placeholder="URL del proyecto (dejar vacío para no mostrar)" style={is}/>
-              <input value={np.tags} onChange={e=>setNp({...np,tags:e.target.value})} placeholder="Tags: React, AWS, Node.js" style={is}/>
-              <ImageUploader label="Imagen principal *" value={np.imgs[0]}
-                onChange={v=>setNp({...np,imgs:[v,np.imgs[1],np.imgs[2]]})} />
-              <ImageUploader label="Imagen 2 (opcional)" value={np.imgs[1]}
-                onChange={v=>setNp({...np,imgs:[np.imgs[0],v,np.imgs[2]]})} />
-              <ImageUploader label="Imagen 3 (opcional)" value={np.imgs[2]}
-                onChange={v=>setNp({...np,imgs:[np.imgs[0],np.imgs[1],v]})} />
-              <div style={{ display:"flex", gap:8, marginBottom:24 }}>
-                <button onClick={async () => {
-                  if(!np.title) return;
-                  const tags = np.tags.split(",").map(t=>t.trim()).filter(Boolean);
-                  if(editingId) {
-                    const updated = {...np, id:editingId, tags};
-                    try { await updateProject(updated); } catch(e) { console.error(e); }
-                    setProjects(projects.map(x => x.id===editingId ? updated : x));
-                    cancelEdit();
-                  } else {
-                    const p = {id:Date.now(),...np,tags};
-                    try { await saveProject(p); } catch(e) { console.error(e); }
-                    setProjects([...projects, p]);
-                    setNp({title:"",desc:"",url:"",imgs:["","",""],tags:""});
-                  }
-                }} style={{ background:A.ac,color:"#fff",border:"none",padding:"9px 20px",borderRadius:8,cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:6 }}>
-                  {editingId ? <><Check size={14}/> Guardar cambios</> : <><Plus size={14}/> Agregar</>}
-                </button>
-                {editingId && (
-                  <button onClick={cancelEdit} style={{ background:"transparent",border:`1px solid ${A.border}`,color:A.mid,padding:"9px 16px",borderRadius:8,cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontSize:13 }}>
-                    Cancelar
-                  </button>
-                )}
-              </div>
-              <p style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:12, fontWeight:600, color:A.mid, marginBottom:10, letterSpacing:".08em", textTransform:"uppercase" }}>Proyectos actuales</p>
-              {projects.map(p => (
-                <div key={p.id} style={{ background:A.surface, border:`1px solid ${editingId===p.id ? A.ac : A.border}`, borderRadius:10, padding:"12px 16px", marginBottom:8, transition:"border-color .2s" }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8 }}>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontWeight:600, fontSize:13, color:A.text, marginBottom:2 }}>{p.title}</div>
-                      <div style={{ color:p.url && p.url!=="*" ? C.ac : C.mid, fontSize:11.5 }}>{p.url && p.url!=="*" ? p.url : "Sin URL pública"}</div>
-                    </div>
-                    <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                      <button onClick={() => startEdit(p)} style={{ background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:7,padding:"5px 12px",cursor:"pointer",color:"#4338CA",fontSize:12,fontWeight:500 }}>Editar</button>
-                      <button onClick={async () => { try { await deleteProject(p.id); } catch(e){} setProjects(projects.filter(x=>x.id!==p.id)); }} style={{ background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.25)",borderRadius:7,padding:"5px 10px",cursor:"pointer",display:"flex",alignItems:"center" }}><Trash2 size={13} color="#F87171"/></button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          {tab==="sectors" && (
-            <div>
-              <p style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:14, fontWeight:600, color:A.text, marginBottom:6 }}>Sectores que atiendes</p>
-              <p style={{ fontSize:12, color:A.mid, marginBottom:18 }}>Aparecen en el carrusel del sitio. Ej: Fintech, Inmobiliarias, Startups.</p>
-              <div style={{ display:"flex", gap:8, marginBottom:24 }}>
-                <input value={ns} onChange={e=>setNs(e.target.value)}
-                  onKeyDown={async e=>{ if(e.key==="Enter"&&ns.trim()){ try{await addSector(ns.trim());}catch(err){console.error(err);} setSectors([...sectors,ns.trim()]); setNs(""); }}}
-                  placeholder="Ej: Tecnología, Retail..." style={{...is,marginBottom:0,flex:1}}/>
-                <button onClick={async()=>{ if(!ns.trim())return; try{await addSector(ns.trim());}catch(err){console.error(err);} setSectors([...sectors,ns.trim()]); setNs(""); }}
-                  style={{ background:A.ac,color:"#fff",border:"none",padding:"0 18px",borderRadius:8,cursor:"pointer",fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:13,flexShrink:0,display:"flex",alignItems:"center",gap:5 }}>
-                  <Plus size={14}/>Agregar
-                </button>
-              </div>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-                {sectors.map((s,i) => (
-                  <div key={i} style={{ background:"#EEF2FF",border:"1px solid #C7D2FE",borderRadius:20,padding:"7px 15px",display:"flex",alignItems:"center",gap:8,fontSize:13,fontWeight:500,color:"#3730A3" }}>
-                    {s}
-                    <button onClick={async()=>{ try{await removeSector(s);}catch(err){console.error(err);} setSectors(sectors.filter((_,x)=>x!==i)); }}
-                      style={{ background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",opacity:.6 }}>
-                      <X size={13} color="#6B7280"/>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {tab==="social" && (
-            <div>
-              <p style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:14, fontWeight:600, color:A.text, marginBottom:20 }}>Redes Sociales</p>
-              {[{k:"linkedin",lbl:"LinkedIn URL"},{k:"instagram",lbl:"Instagram URL"}].map(s => (
-                <div key={s.k}><label style={{ fontSize:12,fontWeight:500,color:A.mid,display:"block",marginBottom:6 }}>{s.lbl}</label><input value={social[s.k]||""} onChange={e=>setSocial({...social,[s.k]:e.target.value})} placeholder={`URL de ${s.lbl}`} style={is}/></div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── APP ROOT ─────────────────────────────────────────────────────
 export default function App() {
@@ -845,21 +865,21 @@ export default function App() {
   const [data, setData] = useState({ projects:DEF_PROJECTS, sectors:DEF_SECTORS, social:DEF_SOCIAL });
 
   useEffect(() => {
-    // Cargar datos desde Supabase
     getProjects().then(p => setData(d => ({...d, projects:p}))).catch(() => {});
     getSectors().then(s => setData(d => ({...d, sectors:s}))).catch(() => {});
     getSocialLinks().then(s => setData(d => ({...d, social:s}))).catch(() => {});
-    // Atajo teclado admin
     const fn = e => { if(e.ctrlKey&&e.shiftKey&&e.key==="A") setAdmin(true); };
     window.addEventListener("keydown", fn);
     return () => window.removeEventListener("keydown", fn);
   }, []);
+
   return (
     <>
       <GlobalStyles/>
       <Navbar onAdmin={() => setAdmin(true)}/>
       <Hero/>
       <Services/>
+      <Estimador/>
       <Sectors sectors={data.sectors}/>
       <Projects projects={data.projects}/>
       <About social={data.social}/>

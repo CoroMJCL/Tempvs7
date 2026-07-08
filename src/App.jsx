@@ -123,11 +123,14 @@ function HeroImage() {
 function Mark({ size = 36, text = false }) {
   return (
     <div style={{ display:"flex", alignItems:"center", cursor:"pointer" }}>
-      <img
-        src="/logo-mark.png"
-        alt="Tempvs7"
-        style={{ height:size * 1.4, width:"auto", objectFit:"contain", flexShrink:0 }}
-      />
+      <span style={{
+        fontFamily:"'Space Grotesk',sans-serif",
+        fontWeight:800,
+        fontSize: size * 0.42,
+        letterSpacing:"0.06em",
+        color: C.ac,
+        lineHeight:1,
+      }}>TEMPVS7</span>
     </div>
   );
 }
@@ -174,6 +177,11 @@ function Hero() {
       <div style={{ maxWidth:1280, margin:"0 auto", padding:"60px 60px", width:"100%", position:"relative", zIndex:1 }}>
         <div className="hero-g" style={{ display:"grid", gridTemplateColumns:"1fr .85fr", gap:70, alignItems:"center" }}>
           <div style={{ animation:"fup .8s ease both" }}>
+            {/* Logo visible en hero */}
+            <div style={{ marginBottom:28 }}>
+              <img src="/logo-mark.png" alt="Tempvs7" style={{ height:110, width:"auto", filter:"drop-shadow(0 4px 24px rgba(0,180,255,.35))" }}/>
+            </div>
+
             {/* Pill status */}
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:`rgba(0,180,255,.06)`, border:`1px solid ${C.brd}`, borderRadius:20, padding:"6px 14px", marginBottom:32 }}>
               <span style={{ width:7, height:7, borderRadius:"50%", background:"#22D3EE", display:"inline-block", animation:"pulse 2s ease infinite" }} />
@@ -812,10 +820,10 @@ function ProjectCard({ p }) {
   return (
     <div style={{ background:C.bgC, border:`1px solid ${hov ? C.brdH : C.brd}`, borderRadius:16, overflow:"hidden", transition:"all .3s", boxShadow:hov ? `0 0 30px ${C.acT}` : "none", transform:hov ? "translateY(-4px)" : "none" }}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
-      <div style={{ height:240, overflow:"hidden", position:"relative", background:C.bgS }}>
+      <div style={{ height:220, overflow:"hidden", position:"relative", background:C.bgS }}>
         {imgs[0] ? (
           <>
-            <img src={imgs[idx]} alt={p.title} loading="lazy" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top", transition:"transform .6s ease", transform:hov?"scale(1.04)":"scale(1)", filter:"contrast(1.05) saturate(1.08)" }} />
+            <img src={imgs[idx]} alt={p.title} loading="lazy" style={{ width:"100%", height:"100%", objectFit:"cover", objectPosition:"top left", transition:"transform .6s ease", transform:hov?"scale(1.04)":"scale(1)" }} />
             {imgs.length > 1 && (
               <div style={{ position:"absolute", bottom:10, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5 }}>
                 {imgs.map((_,i) => <button key={i} onClick={() => setIdx(i)} style={{ width:i===idx?18:6, height:5, borderRadius:3, border:"none", cursor:"pointer", background:i===idx?C.ac:"rgba(255,255,255,.3)", transition:"all .3s", padding:0 }} />)}
@@ -1015,8 +1023,10 @@ function Footer({ social, onAdmin }) {
 
 // ── WHATSAPP FLOTANTE ────────────────────────────────────────────
 function WhatsApp({ number }) {
-  if (!number) return null;
-  const clean = number.replace(/\D/g, "");
+  // Usar el número configurado o el de Maximo por defecto
+  const tel = number || "+56940042905";
+  if (!tel) return null;
+  const clean = tel.replace(/\D/g, "");
   const msg = encodeURIComponent("Hola Maximo, vi tu sitio Tempvs7.cl y me interesa cotizar un proyecto. ¿Podemos hablar?");
   const url = `https://wa.me/${clean}?text=${msg}`;
   return (

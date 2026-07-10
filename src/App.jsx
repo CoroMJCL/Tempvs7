@@ -237,46 +237,100 @@ function Hero() {
   );
 }
 
-// ── SERVICIOS (BENTO) ────────────────────────────────────────────
-function BentoCard({ svc }) {
-  const [hov, setHov] = useState(false);
-  const Icon = svc.icon;
-  return (
-    <div style={{ gridColumn:`span ${svc.span}`, background:hov ? C.bgS : C.bgC, border:`1px solid ${hov ? C.brdH : C.brd}`, borderRadius:16, padding:28, cursor:"default", transition:"all .3s", boxShadow:hov ? `0 0 30px ${C.acT}, inset 0 1px 0 rgba(0,180,255,.1)` : "none" }}
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
-      <div style={{ width:44, height:44, borderRadius:11, background:hov ? C.acT : `rgba(255,255,255,.04)`, border:`1px solid ${hov ? C.ac : C.brd}`, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:18, transition:"all .3s" }}>
-        <Icon size={20} color={hov ? C.ac : C.mid} />
-      </div>
-      <h3 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:17, fontWeight:600, color:C.txt, marginBottom:10, letterSpacing:"-.02em" }}>{svc.t}</h3>
-      <p style={{ fontSize:13.5, color:C.mid, lineHeight:1.72 }}>{svc.d}</p>
-      <div style={{ marginTop:18, fontSize:12, fontWeight:500, color:hov ? C.ac : C.lgt, display:"flex", alignItems:"center", gap:5, transition:"color .3s" }}>Saber más <ChevronRight size={13} /></div>
-    </div>
-  );
-}
+// ── SERVICES + TECH STACK ───────────────────────────────────────
+const SVCS = [
+  { icon:"🌐", t:"Desarrollo Web",       d:"React, Next.js y PWA de alto rendimiento" },
+  { icon:"☁️", t:"Arquitectura Cloud",   d:"AWS, Azure, microservicios y CI/CD" },
+  { icon:"🔄", t:"Modernización Legacy", d:"COBOL y AS400 hacia plataformas modernas" },
+  { icon:"⚡", t:"Integraciones API",    d:"REST, GraphQL y automatización de procesos" },
+  { icon:"📱", t:"Apps Progresivas",     d:"PWA con experiencia nativa, sin App Store" },
+  { icon:"💡", t:"Consultoría Tech",     d:"Roadmaps, auditorías y decisiones críticas" },
+];
+
+const STACK = [
+  { cat:"Frontend",       color:"#3B82F6", bg:"rgba(59,130,246,.1)",  items:["React","Next.js","JavaScript","TypeScript","HTML / CSS","PWA","Vite"] },
+  { cat:"Backend",        color:"#10B981", bg:"rgba(16,185,129,.1)",  items:["C# / .NET","Node.js","REST APIs","GraphQL","Webhooks"] },
+  { cat:"Cloud & DevOps", color:"#8B5CF6", bg:"rgba(139,92,246,.1)",  items:["AWS Lambda","S3","Step Functions","SQS","Azure","Vercel","CI/CD"] },
+  { cat:"Bases de datos", color:"#F59E0B", bg:"rgba(245,158,11,.1)",  items:["PostgreSQL","SQL Server","Oracle","Supabase","Aurora"] },
+  { cat:"Arquitectura",   color:"#EF4444", bg:"rgba(239,68,68,.1)",   items:["Microservicios","Sistemas distribuidos","Event-driven","COBOL / AS400","Banca crítica"] },
+  { cat:"Liderazgo",      color:"#EC4899", bg:"rgba(236,72,153,.1)",  items:["Tech Lead 20+ años","Equipos hasta 10+","Scrum / Agile","Fintech / Banca","Code Review"] },
+];
 
 function Services() {
   return (
-    <section id="servicios" style={{ padding:"96px 60px", background:C.bg, borderTop:`1px solid ${C.brd}` }}>
-      <div style={{ maxWidth:1280, margin:"0 auto" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:52, flexWrap:"wrap", gap:20 }}>
-          <div>
-            <div style={{ fontSize:11, fontWeight:600, color:C.ac, letterSpacing:".14em", textTransform:"uppercase", marginBottom:12, fontFamily:"'Space Grotesk',sans-serif" }}>— Servicios</div>
-            <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:"clamp(28px,3.5vw,46px)", fontWeight:700, color:C.txt, letterSpacing:"-.04em", lineHeight:1.1 }}>
-              Todo lo que tu<br />proyecto necesita.
-            </h2>
-          </div>
-          <p style={{ fontSize:14.5, color:C.mid, maxWidth:360, lineHeight:1.72 }}>
-            Soluciones completas de ingeniería para empresas que quieren crecer sin depender de equipos internos costosos.
-          </p>
+    <section id="servicios" style={{ padding:"96px 60px", background:C.bg }}>
+      <div style={{ maxWidth:1100, margin:"0 auto" }}>
+
+        <div style={{ marginBottom:52 }}>
+          <div style={{ fontSize:11, fontWeight:600, color:C.ac, letterSpacing:".14em", textTransform:"uppercase", marginBottom:12, fontFamily:"'Space Grotesk',sans-serif" }}>— Servicios</div>
+          <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:"clamp(26px,3.5vw,44px)", fontWeight:700, color:C.txt, letterSpacing:"-.04em", lineHeight:1.1, marginBottom:14 }}>
+            ¿En qué puedo<br/><span style={{ color:C.ac }}>ayudarte?</span>
+          </h2>
         </div>
-        <div className="bento" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14 }}>
-          {SVCS.map((s,i) => <BentoCard key={i} svc={s} />)}
+
+        {/* Cards de servicios compactas */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))", gap:14, marginBottom:80 }}>
+          {SVCS.map((s,i) => (
+            <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:14, background:C.bgC, border:`1px solid ${C.brd}`, borderRadius:14, padding:"18px 20px", transition:"border-color .25s", cursor:"default" }}
+              onMouseEnter={e=>e.currentTarget.style.borderColor=C.ac}
+              onMouseLeave={e=>e.currentTarget.style.borderColor=C.brd}>
+              <span style={{ fontSize:24, flexShrink:0, marginTop:2 }}>{s.icon}</span>
+              <div>
+                <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:600, fontSize:14.5, color:C.txt, marginBottom:4 }}>{s.t}</div>
+                <div style={{ fontSize:12.5, color:C.mid, lineHeight:1.55 }}>{s.d}</div>
+              </div>
+            </div>
+          ))}
         </div>
+
+        {/* Stack tecnológico */}
+        <div style={{ marginBottom:36 }}>
+          <div style={{ fontSize:11, fontWeight:600, color:C.ac, letterSpacing:".14em", textTransform:"uppercase", marginBottom:12, fontFamily:"'Space Grotesk',sans-serif" }}>— Stack tecnológico</div>
+          <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:"clamp(22px,2.8vw,36px)", fontWeight:700, color:C.txt, letterSpacing:"-.04em", lineHeight:1.1, marginBottom:8 }}>
+            20 años cubriendo<br/><span style={{ color:C.ac }}>todas las capas del stack.</span>
+          </h2>
+          <p style={{ fontSize:14.5, color:C.mid, lineHeight:1.7 }}>Desde sistemas bancarios críticos hasta apps web modernas. Fintech, banca y Pymes.</p>
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(310px, 1fr))", gap:16, marginBottom:48 }}>
+          {STACK.map((cat,i) => (
+            <div key={i} style={{ background:C.bgC, border:`1.5px solid ${C.brd}`, borderRadius:16, padding:22, transition:"border-color .25s" }}
+              onMouseEnter={e=>e.currentTarget.style.borderColor=cat.color}
+              onMouseLeave={e=>e.currentTarget.style.borderColor=C.brd}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+                <div style={{ width:10, height:10, borderRadius:"50%", background:cat.color, flexShrink:0, boxShadow:`0 0 10px ${cat.color}` }}/>
+                <span style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:12.5, color:cat.color, letterSpacing:".08em", textTransform:"uppercase" }}>{cat.cat}</span>
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+                {cat.items.map((tech,j) => (
+                  <span key={j} style={{ padding:"5px 12px", borderRadius:7, background:cat.bg, border:`1px solid ${cat.color}35`, fontSize:13, color:C.txt, fontWeight:500 }}>
+                    {tech}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Stats */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:1, background:C.brd, borderRadius:16, overflow:"hidden" }}>
+          {[
+            { n:"20+", l:"Años de experiencia" },
+            { n:"5",   l:"Empresas del sector financiero" },
+            { n:"10+", l:"Ingenieros liderados" },
+            { n:"100%", l:"Proyectos entregados" },
+          ].map((s,i) => (
+            <div key={i} style={{ background:C.bgC, padding:"28px 20px", textAlign:"center" }}>
+              <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:800, fontSize:34, color:C.ac, marginBottom:6 }}>{s.n}</div>
+              <div style={{ fontSize:12, color:C.mid, lineHeight:1.4 }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+
       </div>
     </section>
   );
 }
-
 
 // ── DIAGNÓSTICO DIGITAL ──────────────────────────────────────────
 const DIAG_Q = [

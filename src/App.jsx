@@ -42,15 +42,6 @@ const DEF_PROJECTS = [
 const DEF_SECTORS = ["Fintech","Inmobiliarias","eCommerce","Startups","ONGs","Educación","Manufactura","Salud","Retail","Servicios"];
 const DEF_SOCIAL  = { linkedin:"https://www.linkedin.com/in/maximohoingti", instagram:"https://www.instagram.com/maximo.ho07/" };
 
-const SVCS = [
-  { icon:Globe,      t:"Desarrollo Web",        d:"Sitios y apps de alto rendimiento con React y Next.js. Arquitectura moderna, velocidad extrema y diseño que convierte.", span:2 },
-  { icon:Cloud,      t:"Arquitectura Cloud",    d:"AWS y Azure. Microservicios, contenedores y CI/CD para crecer sin fricciones.", span:1 },
-  { icon:RefreshCw,  t:"Modernización Legacy",  d:"COBOL y AS400 hacia plataformas modernas. Migración sin riesgos, con continuidad total.", span:1 },
-  { icon:Zap,        t:"Integraciones API",     d:"REST, GraphQL y webhooks. Conectamos sistemas y automatizamos procesos que hoy son manuales.", span:1 },
-  { icon:Smartphone, t:"Apps Progresivas",      d:"PWAs con experiencia nativa en cualquier dispositivo. Sin pasar por el App Store.", span:1 },
-  { icon:Lightbulb,  t:"Consultoría Tech",      d:"Roadmaps, auditorías y decisiones tecnológicas que realmente importan para tu negocio.", span:1 },
-];
-
 // ── ESTILOS ───────────────────────────────────────────────────────
 function GlobalStyles() {
   useEffect(() => {
